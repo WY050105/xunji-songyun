@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>寻迹宋韵 · 开封景区语言景观交互式词云导航系统</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@400;600;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* 黑金 · 取自赛事展板 */
+  --ink:#E9E7E2; --ink-2:#A8A6A0; --paper:#1E1D19; --paper-2:#2A2823;
+  --gold:#E0CA71; --gold-2:#B7A354; --red:#C9A44C; --deep:#F2EFE6; --azure:#7C8FC4;
+  --shadow:0 8px 24px rgba(0,0,0,.45);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Noto Serif SC','ZCOOL XiaoWei',serif;color:var(--ink);background-color:#171612;
+  background-image:radial-gradient(130% 110% at 50% -10%, #2A2823 0%, #201F1B 42%, #161511 74%, #100F0C 100%);}
+h1,h2,.brand{font-family:'Ma Shan Zheng','Noto Serif SC',cursive;font-weight:400}
+/* ---------- 顶栏 ---------- */
+header{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;gap:12px;
+  padding:13px 20px;flex-wrap:wrap;row-gap:8px;background:linear-gradient(180deg,rgba(16,15,12,.96),rgba(16,15,12,.86));color:#E9E7E2;
+  backdrop-filter:blur(8px);box-shadow:0 1px 0 rgba(224,202,113,.28) inset,0 2px 16px rgba(0,0,0,.6)}
+header .brand{font-size:clamp(18px,4.5vw,26px);letter-spacing:4px;color:var(--gold);text-shadow:0 0 18px rgba(224,202,113,.35)}
+header .crumb{font-size:clamp(11px,3vw,14px);opacity:.9;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .crumb b{color:var(--gold)}
+.abtn{border:1px solid rgba(224,202,113,.55);color:var(--gold);background:transparent;border-radius:999px;
+  padding:7px 15px;font-family:inherit;font-size:13px;letter-spacing:2px;cursor:pointer;white-space:nowrap}
+header .back{display:none;border:1px solid rgba(224,202,113,.55);color:var(--gold);background:transparent;border-radius:999px;
+  padding:7px 15px;font-family:inherit;font-size:14px;cursor:pointer}
+header .back.show{display:inline-block}
+/* ---------- 场景容器 ---------- */
+#stage{position:absolute;inset:var(--hdr,64px) 0 0 0}
+.scene{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .5s ease,transform .5s ease;transform:scale(.98)}
+.scene.active{opacity:1;pointer-events:auto;transform:scale(1)}
+.scene-title{position:absolute;left:50%;transform:translateX(-50%);top:18px;z-index:5;text-align:center;pointer-events:none}
+.scene-title h2{font-size:clamp(20px,5vw,32px);color:var(--deep);letter-spacing:3px;font-weight:400;text-shadow:0 0 22px rgba(224,202,113,.28)}
+.scene-title p{font-size:clamp(12px,3vw,14px);color:var(--ink-2);letter-spacing:3px;margin-top:6px}
+.scene-title h2::after{content:'';display:block;width:46px;height:1px;background:var(--gold);margin:8px auto 0;opacity:.75}
+.scene-title h2::before{content:'';display:inline-block;width:5px;height:5px;background:var(--gold);border-radius:1px;
+  margin-right:9px;vertical-align:6px;opacity:.8}
+/* ---------- SVG 地图 ---------- */
+svg{width:100%;height:100%;display:block;touch-action:pan-y}
+.map-bg{fill:rgba(255,255,255,.025);stroke:rgba(224,202,113,.35);stroke-width:.7}
+.wall{fill:none;stroke:rgba(183,163,84,.75);stroke-width:1.4;stroke-dasharray:6 4;opacity:1}
+.river{fill:none;stroke:rgba(124,143,196,.55);stroke-width:6;stroke-linecap:round;opacity:.9}
+.road{stroke:rgba(224,202,113,.28);stroke-width:1.2;stroke-dasharray:2 6;fill:none;opacity:1}
+.map-label{font-family:'ZCOOL XiaoWei',serif;fill:rgba(224,202,113,.30);font-size:2.6px;letter-spacing:1.4px;pointer-events:none}
+/* 地图金色细框：外框 + 内框 + 四角撇角，均不参与交互 */
+.frame{fill:none;stroke:rgba(224,202,113,.55);stroke-width:.5;pointer-events:none}
+.frame-in{fill:none;stroke:rgba(224,202,113,.22);stroke-width:.35;pointer-events:none}
+.corner{fill:none;stroke:rgba(224,202,113,.85);stroke-width:.8;stroke-linecap:round;pointer-events:none}
+.rule{stroke:rgba(224,202,113,.35);stroke-width:.35;pointer-events:none}
+.rule-txt{font-family:'ZCOOL XiaoWei',serif;fill:rgba(224,202,113,.55);font-size:2.6px;letter-spacing:.8px;pointer-events:none}
+/* 景区模块：悬停只用描边变色，不做位移/滤镜，避免 hover 抖动 */
+.node{cursor:pointer;outline:none}
+.node *{pointer-events:none}          /* 子元素一律不命中，命中只由 .hit 决定 */
+.node .hit{fill:#fff;fill-opacity:0;pointer-events:all}
+.node circle.body{fill:url(#gNode);stroke:rgba(255,246,214,.55);stroke-width:.6;transition:stroke .15s,stroke-width .15s}
+.node:hover circle.body,.node:focus circle.body{stroke:#FFF6D6;stroke-width:1.3}
+.node text.name{font-family:'Ma Shan Zheng',serif;font-size:2.85px;fill:#1E1D19;text-anchor:middle;letter-spacing:.1px}
+
+/* 词云舞台 */
+.quote-bar{position:absolute;top:76px;left:50%;transform:translateX(-50%);z-index:5;max-width:92%;
+  font-family:'ZCOOL XiaoWei',serif;font-size:clamp(12px,2.8vw,14.5px);letter-spacing:2px;color:rgba(224,202,113,.85);
+  background:rgba(26,25,21,.6);border:1px solid rgba(224,202,113,.28);border-radius:999px;padding:8px 24px;
+  text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.quote-bar.qin{animation:qin .9s ease}
+@keyframes qin{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+#wordStage{position:absolute;inset:14px 0 0 0}
+#wordStage::before{content:'';position:absolute;inset:34px 12px 54px;border:1px solid rgba(224,202,113,.16);
+  border-radius:10px;pointer-events:none}
+#wordStage::after{content:'';position:absolute;inset:34px 12px 54px;
+  background:
+    linear-gradient(rgba(224,202,113,.55),rgba(224,202,113,.55)) left top/14px 1px no-repeat,
+    linear-gradient(rgba(224,202,113,.55),rgba(224,202,113,.55)) left top/1px 14px no-repeat,
+    linear-gradient(rgba(224,202,113,.55),rgba(224,202,113,.55)) right top/14px 1px no-repeat,
+    linear-gradient(rgba(224,202,113,.55),rgba(224,202,113,.55)) right top/1px 14px no-repeat,
+    linear-gradient(rgba(224,202,113,.55),rgba(224,202,113,.55)) left bottom/14px 1px no-repeat,
+    linear-gradient(rgba(224,202,113,.55),rgba(224,202,113,.55)) left bottom/1px 14px no-repeat,
+    linear-gradient(rgba(224,202,113,.55),rgba(224,202,113,.55)) right bottom/14px 1px no-repeat,
+    linear-gradient(rgba(224,202,113,.55),rgba(224,202,113,.55)) right bottom/1px 14px no-repeat;
+  pointer-events:none}
+.word{position:absolute;transform:translate(-50%,-50%);cursor:pointer;padding:11px 18px;border-radius:16px;
+  background:linear-gradient(160deg,rgba(42,40,35,.94),rgba(26,25,21,.94));border:1px solid rgba(224,202,113,.42);
+  box-shadow:0 4px 16px rgba(0,0,0,.5);font-family:'ZCOOL XiaoWei',serif;line-height:1.25;text-align:center;
+  animation:float 5s ease-in-out infinite;transition:box-shadow .2s,transform .2s}
+.word:hover{box-shadow:0 0 22px rgba(224,202,113,.35);border-color:var(--gold)}
+.word::before{content:'';position:absolute;inset:4px;border:1px solid rgba(224,202,113,.16);border-radius:9px;pointer-events:none}
+.word{position:absolute}
+.word .w{display:block;font-size:var(--fs,16px);color:#EFEBE0}
+.word .z{display:block;font-size:11.5px;color:rgba(224,202,113,.72);margin-top:5px;letter-spacing:1px}
+.word.r1{--fs:clamp(18px,4.4vw,25px)} .word.r2{--fs:clamp(15px,3.6vw,19px)} .word.r3{--fs:clamp(12.5px,3.1vw,16px);opacity:.92}
+@keyframes float{0%,100%{margin-top:0}50%{margin-top:-8px}}
+/* 六大类 */
+.cats{position:absolute;inset:0;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:16px;padding:96px 6% 26px}
+.cat{width:min(30%,168px);min-width:104px;height:clamp(126px,19vh,178px);aspect-ratio:auto;border-radius:20px;cursor:pointer;position:relative;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#EFEBE0;
+  box-shadow:0 8px 22px rgba(0,0,0,.5),0 0 0 1px rgba(224,202,113,.35) inset;border:1px solid rgba(224,202,113,.45);
+  transition:transform .25s;font-family:'ZCOOL XiaoWei',serif;color:#EFEBE0}
+.cat:hover{transform:translateY(-5px)}
+.cat .ico{font-size:clamp(24px,6.5vw,40px);display:flex;align-items:center;justify-content:center;line-height:1}
+.cat .ico svg{width:1em;height:1em;display:block}
+.cat .nm{font-size:clamp(15px,4vw,21px);letter-spacing:2px;color:var(--gold)}
+.cat .en{font-size:10px;opacity:.72;letter-spacing:2px;color:#CFCABA}
+.cat::before{content:'';position:absolute;inset:6px;border:1px solid rgba(224,202,113,.28);border-radius:13px;pointer-events:none}
+.cat .corner{position:absolute;inset:10px;pointer-events:none;border-radius:8px;
+  background:
+    linear-gradient(var(--gold),var(--gold)) left top/9px 1px no-repeat,
+    linear-gradient(var(--gold),var(--gold)) left top/1px 9px no-repeat,
+    linear-gradient(var(--gold),var(--gold)) right top/9px 1px no-repeat,
+    linear-gradient(var(--gold),var(--gold)) right top/1px 9px no-repeat,
+    linear-gradient(var(--gold),var(--gold)) left bottom/9px 1px no-repeat,
+    linear-gradient(var(--gold),var(--gold)) left bottom/1px 9px no-repeat,
+    linear-gradient(var(--gold),var(--gold)) right bottom/9px 1px no-repeat,
+    linear-gradient(var(--gold),var(--gold)) right bottom/1px 9px no-repeat;
+  opacity:.65}
+.cat::after{content:attr(data-n) " 词";position:absolute;top:10px;right:12px;font-size:11px;background:rgba(224,202,113,.16);color:var(--gold);padding:2px 9px;border-radius:99px;letter-spacing:1px}
+/* 详情卡 */
+#about{position:fixed;inset:0;z-index:95;display:none;align-items:flex-end;justify-content:center;background:rgba(8,8,6,.72);backdrop-filter:blur(4px)}
+#about.open{display:flex}
+.acard{position:relative;width:min(640px,96vw);max-height:88vh;overflow:auto;background:linear-gradient(180deg,#2A2823,#1B1A16);
+  border:1px solid rgba(224,202,113,.4);border-radius:22px 22px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.7);animation:up .35s ease}
+.acard .x{position:absolute;top:10px;right:12px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(224,202,113,.5);background:rgba(0,0,0,.5);color:#E0CA71;font-size:18px;cursor:pointer}
+.ahead{padding:30px 26px 20px;border-bottom:1px solid rgba(224,202,113,.25);text-align:center}
+.at1{font-family:'Ma Shan Zheng',serif;font-size:clamp(26px,6vw,36px);color:var(--gold);letter-spacing:8px;text-shadow:0 0 20px rgba(224,202,113,.3)}
+.at2{margin-top:8px;font-size:clamp(13px,3.4vw,16px);color:#EFEBE0;letter-spacing:1px}
+.at3{margin-top:10px;font-size:12px;line-height:1.8;color:#A8A6A0;letter-spacing:2px}
+.abody{padding:22px 28px 30px}
+.asec{margin-bottom:24px}
+.asec h3{font-family:'ZCOOL XiaoWei',serif;font-size:15.5px;color:var(--gold);letter-spacing:3px;font-weight:400;margin-bottom:10px}
+.asec p{font-size:14.5px;line-height:2.05;color:#CFCABA;text-align:justify}
+.asec p b{color:var(--gold);font-weight:600}
+.agrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:10px}
+.acell{background:rgba(224,202,113,.07);border:1px solid rgba(224,202,113,.3);border-radius:10px;padding:13px 15px}
+.acell b{display:block;font-family:'ZCOOL XiaoWei',serif;font-size:14.5px;color:var(--gold);letter-spacing:2px;margin-bottom:6px}
+.acell span{font-size:12.5px;line-height:1.75;color:#CFCABA}
+@media (min-width:700px){ #about{align-items:center} .acard{border-radius:22px} }
+
+#modal{position:fixed;inset:0;z-index:90;display:none;align-items:flex-end;justify-content:center;background:rgba(8,8,6,.72);backdrop-filter:blur(4px);padding:0 10px 12px}
+#modal.open{display:flex}
+.card{width:min(560px,96vw);max-height:min(86vh,calc(100vh - 92px));overflow:auto;position:relative;
+  background:linear-gradient(180deg,#fbf5e8,#f1e6cd);border-radius:20px;padding:0 0 18px;box-shadow:0 -12px 40px rgba(0,0,0,.4);animation:up .35s ease}
+@keyframes up{from{transform:translateY(60px);opacity:0}}
+.card .art{height:170px;border-radius:22px 22px 0 0;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.card .art svg.deco{width:100%;height:100%}
+.card .art .t{position:absolute;bottom:10px;left:0;right:0;text-align:center;color:#F2EFE6;font-family:'Ma Shan Zheng',serif;
+  font-size:clamp(20px,5.5vw,28px);text-shadow:0 2px 8px rgba(0,0,0,.55)}
+.card .bd{padding:20px 26px 8px}
+.card .tag{display:inline-block;font-size:11px;color:#1E1D19;background:var(--gold);border-radius:99px;padding:3px 12px;letter-spacing:2px}
+.card p{margin-top:14px;font-size:15.5px;line-height:2.05;text-align:justify;color:#000000}
+.card .route{margin-top:16px;background:rgba(224,202,113,.12);border-left:3px solid var(--gold-2);border-radius:6px;padding:13px 16px;font-size:14px;line-height:1.95;color:#000000}
+.card .route b{color:var(--gold)}
+.card .x{position:absolute;top:10px;right:12px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(224,202,113,.5);background:rgba(0,0,0,.5);
+  color:#E0CA71;font-size:18px;cursor:pointer}
+.card::after{content:'';position:absolute;left:20px;right:20px;bottom:8px;height:0;border-top:1px solid rgba(224,202,113,.22);pointer-events:none}
+@media (min-width:700px){ #modal{align-items:center;padding:24px} .card{border-radius:20px} @keyframes up{from{transform:translateY(30px)}} }
+/* 返回地图浮动按钮 */
+.fab{position:fixed;bottom:22px;right:18px;z-index:60;border:none;border-radius:999px;padding:12px 20px;cursor:pointer;
+  background:linear-gradient(160deg,#3A362B,#1E1D19);color:var(--gold);border:1px solid rgba(224,202,113,.5);font-family:'Ma Shan Zheng',serif;font-size:16px;
+  box-shadow:0 8px 20px rgba(0,0,0,.35);display:none;letter-spacing:2px}
+.fab.show{display:block}
+.stamp-toast{position:fixed;bottom:96px;left:50%;margin:0;width:max-content;max-width:80vw;
+  transform:translateX(-50%) translateY(14px) scale(.92);z-index:99;text-align:center;
+  font-family:'Ma Shan Zheng',serif;font-size:16px;line-height:1.5;letter-spacing:3px;color:#1E1D19;
+  background:linear-gradient(160deg,#F3E4A9,#D0B35E);padding:9px 22px;border-radius:8px;
+  box-shadow:0 6px 20px rgba(0,0,0,.55);opacity:0;pointer-events:none;visibility:hidden;
+  transition:opacity .4s ease,transform .45s cubic-bezier(.2,1.4,.4,1),visibility .4s}
+.stamp-toast.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0) scale(1)}
+#pass{position:fixed;inset:0;z-index:95;display:none;align-items:flex-end;justify-content:center;background:rgba(8,8,6,.72);backdrop-filter:blur(4px)}
+#pass.open{display:flex}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:16px;margin:8px 0 18px}
+.pcell{aspect-ratio:1/.9;border:1px dashed rgba(224,202,113,.35);border-radius:10px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:6px;font-family:'ZCOOL XiaoWei',serif}
+.pcell .seal{width:60px;height:60px;border-radius:50%;border:2px solid rgba(224,202,113,.3);display:flex;align-items:center;justify-content:center;
+  font-family:'Ma Shan Zheng',serif;font-size:20px;color:rgba(224,202,113,.28)}
+.pcell.done .seal{border-color:var(--gold);color:#1E1D19;background:linear-gradient(160deg,#F3E4A9,#D0B35E);
+  box-shadow:0 0 18px rgba(224,202,113,.45);transform:rotate(-6deg)}
+.pcell .pn{font-size:12px;letter-spacing:1px;color:#CFCABA}
+.pcell.done .pn{color:var(--gold)}
+.pnote{font-size:13px;line-height:1.8;color:#A8A6A0;text-align:center;letter-spacing:1px}
+@media (min-width:700px){ #pass{align-items:center} }
+/* 九项新功能样式 */
+.ps-mini{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.ps-mini span{font-family:'ZCOOL XiaoWei',serif;font-size:clamp(11px,2.4vw,12.5px);letter-spacing:2px;color:var(--gold);
+  background:rgba(26,25,21,.75);border:1px solid rgba(224,202,113,.3);border-radius:999px;padding:6px 16px}
+.hot-chip{position:absolute;top:76px;right:14px;z-index:5;font-family:'ZCOOL XiaoWei',serif;font-size:12px;
+  letter-spacing:1px;color:var(--gold);background:rgba(26,25,21,.78);border:1px solid rgba(224,202,113,.35);
+  border-radius:999px;padding:7px 16px;pointer-events:none;max-width:46%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+details.gj{margin-top:16px;border:1px solid rgba(224,202,113,.35);border-radius:8px;background:rgba(224,202,113,.05)}
+details.gj summary{cursor:pointer;padding:12px 16px;font-family:'ZCOOL XiaoWei',serif;font-size:14px;letter-spacing:2px;color:var(--gold);list-style:none}
+details.gj summary::before{content:'▸ ';color:var(--gold)}
+details.gj[open] summary::before{content:'▾ '}
+details.gj p{padding:2px 16px 14px;font-size:14px;line-height:2.05;color:#000;text-align:justify;margin:0}
+.scroll-wrap{position:absolute;inset:calc(var(--hdr,88px) + 58px) 0 44px;overflow-x:auto;overflow-y:hidden;cursor:grab;touch-action:pan-x;padding:0 14px;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;display:flex;align-items:center;justify-content:flex-start}
+.scroll-wrap::-webkit-scrollbar{display:none}
+.scroll-wrap:active{cursor:grabbing}
+.scroll-wrap svg{flex:0 0 auto;display:block;max-width:none}
+.scroll-wrap .sband{stroke-width:.32;stroke:rgba(224,202,113,.34)}
+.scroll-wrap .snode circle{stroke-width:.5}
+.scroll-hint{position:absolute;bottom:16px;font-size:12px;left:50%;transform:translateX(-50%);font-size:11px;letter-spacing:4px;color:rgba(224,202,113,.55);pointer-events:none}
+.snode{cursor:pointer}
+.snode circle{fill:rgba(42,40,35,.85);stroke:var(--gold);stroke-width:.6}
+.snode:hover circle{stroke:#FFF6D6}
+.snode text{fill:#F4F1E6;font-family:'ZCOOL XiaoWei',serif;text-anchor:middle;dominant-baseline:middle;pointer-events:none;
+  font-size:calc(min(var(--su,2.4px), 3.0px) * 1.5)}
+.snode .band{fill:#E0CA71;font-size:calc(min(var(--su,2.4px), 3.0px) * 1.3);letter-spacing:0;dominant-baseline:middle}
+@media (max-width:640px){ .snode text{font-size:calc(min(var(--su,2px), 2.0px) * 1.5)} .snode .band{font-size:calc(min(var(--su,2px), 2.0px) * 1.25)} }
+@media (max-width:400px){ .snode text{font-size:calc(min(var(--su,1.75px), 1.75px) * 1.5)} .snode .band{font-size:calc(min(var(--su,1.75px), 1.75px) * 1.2)} }
+.snode .shalo{fill:none;stroke:rgba(16,15,13,.95);stroke-width:1.1;stroke-linejoin:round}
+.snode .shalo2{fill:none;stroke:rgba(16,15,13,.95);stroke-width:2.2;stroke-linejoin:round}
+.sband{fill:none;stroke:rgba(224,202,113,.5);stroke-width:.42;stroke-linejoin:round;stroke-linecap:round;pointer-events:none}
+.shill{fill:rgba(224,202,113,.045);stroke:rgba(224,202,113,.16);stroke-width:.25;pointer-events:none}
+.sriver{fill:none;stroke:rgba(124,143,196,.22);stroke-width:2.4;stroke-linecap:round;pointer-events:none}
+.data-wrap{position:absolute;inset:82px 7% 26px;overflow:auto;display:flex;flex-direction:column;gap:20px;padding:20px 0 26px}
+.dcard{background:linear-gradient(180deg,rgba(42,40,35,.9),rgba(26,25,21,.9));border:1px solid rgba(224,202,113,.4);
+  border-radius:16px;padding:20px 24px}
+.dcard h3{font-family:'ZCOOL XiaoWei',serif;font-size:15.5px;letter-spacing:3px;color:var(--gold);font-weight:400;margin-bottom:16px}
+.bar-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.bar-row .bl{width:72px;font-size:13px;color:#CFCABA;letter-spacing:1px;text-align:right;flex:none;font-family:'ZCOOL XiaoWei',serif}
+.bar-row .bt{flex:1;height:14px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden}
+.bar-row .bf{height:100%;background:linear-gradient(90deg,#B7A354,#F3E4A9);border-radius:99px;width:0;transition:width 1s ease}
+.bar-row .bn{width:60px;font-size:12px;color:var(--gold);flex:none}
+.dnote{font-size:12px;line-height:1.7;color:#8f8b7e;letter-spacing:1px;margin-top:6px}
+.npc{position:fixed;left:14px;bottom:calc(20px + 44px);z-index:70;display:none;align-items:flex-start;gap:10px;
+  width:max-content;max-width:min(340px,72vw);align-self:flex-start}
+.npc.show{display:flex}
+.npc-ava{width:40px;height:40px;border-radius:50%;background:linear-gradient(160deg,#F3E4A9,#D0B35E);display:flex;
+  align-items:center;justify-content:center;font-size:20px;flex:none;box-shadow:0 4px 14px rgba(0,0,0,.5);animation:float 5s ease-in-out infinite}
+.npc-bubble{flex:1 1 auto;min-width:0;background:linear-gradient(160deg,rgba(34,32,28,.97),rgba(22,21,18,.97));
+  border:1px solid rgba(224,202,113,.45);box-shadow:0 10px 26px rgba(0,0,0,.6);
+  border-radius:14px 14px 14px 3px;padding:11px 14px;font-family:'ZCOOL XiaoWei',serif;
+  font-size:13px;line-height:1.7;color:#EFEBE0;cursor:pointer;overflow-wrap:anywhere}
+.npc-bubble b{color:var(--gold)}
+.npc.compact{gap:6px}
+.npc.compact .npc-ava{width:30px;height:30px;font-size:15px}
+.npc.compact .npc-bubble{padding:9px 11px;font-size:12.5px;line-height:1.72;border-radius:11px 11px 11px 3px}
+.npc.compact .npc-bubble .go{font-size:11.5px}
+.npc-bubble .go{color:var(--gold);text-decoration:none;letter-spacing:0;white-space:nowrap;
+  border-bottom:1px solid rgba(224,202,113,.6);padding-bottom:1px}
+/* 手机端顶栏压缩为一行，避免第二行被提示气泡压住 */
+@media (max-width:640px){
+  header{padding:9px 10px;gap:5px;flex-wrap:nowrap;row-gap:0;overflow:hidden}
+  header .brand{font-size:15px;letter-spacing:1px;flex:none}
+  header .crumb{display:none}
+  .abtn{padding:5px 8px;font-size:11px;letter-spacing:0;flex:0 1 auto;min-width:0;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  header .back{padding:5px 8px;font-size:12px;letter-spacing:0;flex:none}
+  header .back.show{display:block}
+}
+@media (max-width:400px){
+  header{padding:8px 8px;gap:4px}
+  header .brand{font-size:13px;letter-spacing:0}
+  .abtn{padding:4px 6px;font-size:10px}
+  header .back{padding:4px 7px;font-size:11px}
+  .cats{gap:10px;padding:112px 4% 76px}
+  .cat{width:min(44%,150px);min-width:118px;height:clamp(132px,20vh,164px)}
+  .cat::after{top:8px;right:9px;font-size:10px;padding:2px 7px}
+  .cat .ico{font-size:clamp(26px,7.5vw,34px)}
+}
+@media (max-width:520px){.npc{max-width:min(300px,82vw);left:10px}.npc-bubble{font-size:12px;padding:10px 12px;line-height:1.65}}
+/* ================= 地图页：地图与灯条分区 ================= */
+#sceneMap{padding:6px 10px 0}
+#sceneMap>svg#mapSvg{position:absolute;left:50%;top:0;transform:translateX(-50%);
+  width:100%;height:100%;display:block;overflow:visible}
+.ps-mini{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;z-index:8;
+  display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center;
+  max-width:94%;pointer-events:none}
+.ps-mini::before{content:'';position:absolute;top:-11px;left:50%;transform:translateX(-50%);
+  width:min(340px,58%);height:1px;
+  background:linear-gradient(90deg,transparent,rgba(224,202,113,.42),transparent)}
+.tip{position:fixed;top:72px;left:0;right:0;margin:0 auto;width:max-content;height:auto;
+  max-width:min(600px,88%);z-index:80;font-size:12.5px;
+  color:#CFCABA;background:rgba(20,19,16,.94);padding:9px 20px;border-radius:14px;
+  border:1px solid rgba(224,202,113,.35);box-shadow:0 8px 24px rgba(0,0,0,.55);
+  pointer-events:none;transition:opacity .4s;text-align:center;line-height:1.75;
+  backdrop-filter:blur(6px)}
+@media (max-aspect-ratio:3/4){
+  #sceneMap{padding:40px 6px 0}
+  /* 灯条单行紧凑，节省纵向空间（高度由两行 98px 降到 ~34px） */
+  .ps-mini{bottom:8px;gap:7px;flex-direction:row;align-items:center;flex-wrap:nowrap;max-width:96%}
+  .ps-mini::before{display:none}
+  .ps-mini span{font-size:10.5px;padding:5px 9px;letter-spacing:.5px;white-space:nowrap;
+    max-width:45vw;overflow:hidden;text-overflow:ellipsis}
+  .tip{font-size:11.5px;padding:8px 16px;max-width:92%}
+}
+/* ================= 词云页：纵向分区，互不压盖 ================= */
+#sceneWords{display:flex;flex-direction:column;padding:8px 14px 0;overflow:visible}
+#sceneWords .scene-title{position:static;transform:none;flex:0 0 auto;text-align:center;margin:0 0 8px;min-height:0}
+#sceneWords .scene-title h2{font-size:clamp(17px,4.2vw,24px);letter-spacing:2px}
+#sceneWords .scene-title h2::after{margin:6px auto 0}
+#sceneWords .scene-title p{font-size:clamp(10.5px,2.6vw,12px);margin-top:4px;letter-spacing:1.5px}
+#sceneWords .quote-bar{position:static;transform:none;flex:none;align-self:center;
+  max-width:min(620px,94%);margin:0 auto 8px;border-radius:12px;padding:8px 18px;
+  font-size:clamp(11.5px,2.7vw,13.5px);line-height:1.7;letter-spacing:1px;white-space:normal;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#sceneWords .hot-chip{position:static;transform:none;flex:none;align-self:center;
+  max-width:min(620px,94%);margin:0 auto 10px;padding:6px 16px;font-size:clamp(11px,2.6vw,12.5px)}
+#sceneWords #wordStage{position:relative;flex:1;min-height:0;inset:auto;margin:0 0 6px}
+#sceneWords #wordStage::before{inset:0;border-radius:12px}
+#sceneWords #wordStage::after{inset:0}
+#sceneWords .word{transform:translate(-50%,-50%)}
+/* 词条随密度整体缩放：字号、内边距、副行同比例变化，布局尺寸真实参与计算 */
+#sceneWords .word{font-size:calc(var(--fs) * var(--k,1))}
+#sceneWords .word .w{font-size:calc(var(--fs) * var(--k,1))}
+#sceneWords .word .z{font-size:calc(11.5px * var(--k,1));margin-top:calc(5px * var(--k,1));
+  white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+#sceneWords .word .w{white-space:nowrap}
+#sceneWords .word{padding:calc(11px * var(--k,1)) calc(18px * var(--k,1));border-radius:16px}
+.quote-bar.hide,.hot-chip.hide{display:none}
+@media (max-width:640px){
+  #sceneWords{padding:8px 10px 56px}
+  #sceneWords .scene-title p{display:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand">寻迹宋韵</span>
+  <span class="crumb" id="crumb">开封全域 · 请点击地图上的景区模块</span>
+  <button class="abtn" id="scrollBtn">✦ 长卷</button>
+  <button class="abtn" id="dataBtn">▦ 语料库</button>
+  <button class="abtn" id="aboutBtn">▣ 研究框架</button>
+  <button class="abtn" id="passBtn">🪙 文牒 <b id="passN">0</b>/10</button>
+  <button class="back" id="backBtn">‹ 返回</button>
+</header>
+
+<div id="stage">
+  <!-- 场景〇：清明上河图长卷 -->
+  <section class="scene" id="sceneScroll">
+    <div class="scene-title"><h2>梦华长卷</h2><p>左右拖动 · 随卷徐行<br>点击景区名进入</p></div>
+    <div class="scroll-wrap" id="scrollWrap">
+      <svg id="scrollSvg" viewBox="0 0 320 72" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="scroll-hint">⟵ 按 住 拖 动 ⟶</div>
+  </section>
+
+  <!-- 场景四：语料库统计 -->
+  <section class="scene" id="sceneData">
+    <div class="scene-title"><h2>语言景观语料库</h2><p>原型示意 · 数据可在脚本 SCORPUS 中替换为实测值</p></div>
+    <div class="data-wrap" id="dataWrap"></div>
+  </section>
+
+  <!-- 场景一：SVG 开封地图 -->
+  <section class="scene active" id="sceneMap">
+<div class="ps-mini" id="miniChips"><span id="hourChip"></span><span id="solarChip"></span></div>
+    <svg viewBox="0 0 100 78" preserveAspectRatio="xMidYMid meet" id="mapSvg">
+      <defs>
+        <radialGradient id="gNode" cx="35%" cy="30%">
+          <stop offset="0%" stop-color="#F3E4A9"/><stop offset="55%" stop-color="#E0CA71"/><stop offset="100%" stop-color="#B7A354"/>
+        </radialGradient>
+      </defs>
+      <rect class="map-bg" x="1.5" y="1.5" width="97" height="75" rx="3"/>
+      <rect class="frame" x="2.6" y="2.6" width="94.8" height="72.8" rx="1.6"/>
+      <rect class="frame-in" x="4" y="4" width="92" height="70" rx="1.2"/>
+      <path class="corner" d="M2.6 9 V2.6 H9"/>
+      <path class="corner" d="M91 2.6 H97.4 V9"/>
+      <path class="corner" d="M97.4 69 H91 V75.4"/>
+      <path class="corner" d="M9 75.4 H2.6 V69"/>
+      <g class="rule">
+        <path d="M22 2.6 V4.2 M38 2.6 V4.2 M54 2.6 V4.2 M70 2.6 V4.2 M86 2.6 V4.2"/>
+        <path d="M2.6 24 H4.2 M2.6 42 H4.2 M2.6 60 H4.2"/>
+      </g>
+      <path class="wall" d="M26 10 L68 10 L80 23 L80 48 L70 64 L36 68 L20 58 L17 32 Z"/>
+      <path class="river" d="M31 7 C34 22 28 30 35 40 C41 50 49 54 52 64"/>
+      <path class="river" d="M52 64 C60 66 68 64 74 68" stroke-width="4.5"/>
+      <ellipse cx="19" cy="54" rx="7.5" ry="5" fill="rgba(124,143,196,.30)"/>
+      <ellipse cx="24" cy="27" rx="6" ry="4.2" fill="rgba(124,143,196,.28)"/>
+      <ellipse cx="73" cy="12" rx="6.5" ry="3.6" fill="rgba(124,143,196,.28)"/>
+      <path class="road" d="M9 24 H91 M9 70 H91 M59 8 V70"/>
+      <g id="nodes"></g>
+    </svg>
+  </section>
+
+  <!-- 场景二：六大类 -->
+  <section class="scene" id="sceneCats">
+    <div class="scene-title"><h2 id="catTitle">景区</h2><p id="catSub">六大主题板块 · 点击进入词汇云</p></div>
+    <div class="cats" id="catGrid"></div>
+  </section>
+
+  <!-- 场景三：词云 -->
+  <section class="scene" id="sceneWords">
+    <div class="scene-title"><h2 id="wordTitle">词汇</h2><p>点击词语 · 查看图片、介绍与到达提示</p></div>
+    <div class="quote-bar" id="quoteBar"></div>
+    <div class="hot-chip" id="hotChip"></div>
+    <div id="wordStage"></div>
+  </section>
+</div>
+
+<button class="fab" id="fabBtn">🏮 回地图</button>
+<div class="npc" id="npc"><div class="npc-ava">🧑‍🍳</div><div class="npc-bubble" id="npcBubble"></div></div>
+<div class="tip" id="tip">提示：地图方位与真实开封一致， 西北为清明上河园·万岁山片区，东北为铁塔公园，东南为禹王台·繁塔</div>
+
+<div id="about">
+  <div class="acard">
+    <button class="x" id="aboutX">✕</button>
+    <div class="ahead">
+      <div class="at1">寻迹宋韵</div>
+      <div class="at2">基于《东京梦华录》的开封景区语言景观调研与数字化活化实践</div>
+      <div class="at3">河南大学第十七届"挑战杯"大学生课外学术科技作品竞赛 · 哲学社会科学类社会调查报告</div>
+    </div>
+    <div class="abody">
+      <div class="asec"><h3>◆ 项目主线</h3>
+        <p>以宋代孟元老《东京梦华录》为贯穿全程的文化主线，以<b>语言景观</b>与<b>多模态话语分析</b>为核心理论工具，聚焦开封宋文化代表性景区，开展线下实体语言景观与线上虚拟语言景观的系统调研，厘清宋代典籍语言资源向当代文旅场景转化的生成机制。</p></div>
+      <div class="asec"><h3>◆ 研究框架："一条主线、两类景观、三维框架、五大体系、一个闭环"</h3>
+        <div class="agrid">
+          <div class="acell"><b>一条主线</b><span>《东京梦华录》典籍贯穿全程</span></div>
+          <div class="acell"><b>两类景观</b><span>静态视觉 / 动态交互 · 线下实体 / 线上虚拟</span></div>
+          <div class="acell"><b>三维框架</b><span>典籍溯源 — 全域协同 — 受众共创</span></div>
+          <div class="acell"><b>五大体系</b><span>建筑规制 / 市井饮食 / 民俗演艺 / 文脉礼制 / 商贸非遗</span></div>
+          <div class="acell"><b>一个闭环</b><span>古籍文本 — 线下景区 — 数字传播</span></div>
+        </div></div>
+      <div class="asec"><h3>◆ 调研方法</h3>
+        <p>田野勘察 · 影像语料采集 · 半结构化访谈 · 问卷调查；搭建<b>开封宋文化语言景观专题语料库</b>，借助 AntConc 开展词频统计与语义分析，建立适配宋文化古都的语言景观评价指标。调研覆盖<b>清明上河园、万岁山武侠城、龙亭公园、铁塔公园、禹王台公园、包公祠、翰园碑林</b>等代表性景区，采集牌匾楹联、碑刻题记、导览标识、演艺台词、NPC 互动语言、口头叫卖等静态与动态语料。</p></div>
+      <div class="asec"><h3>◆ 数字活化路径</h3>
+        <p>将调研语料生成主题词云，以<b>开封全域文旅电子地图</b>为底层，分建筑、服饰、饮食等维度生成词云，实现历史语词、文化释义与实地导航功能联动，助力"快进慢游"文旅体验，服务开封"地下考古东京城、地上真实开封城、云上数字大宋城"立体展示格局。</p></div>
+      <div class="asec"><h3>◆ 政策对接</h3>
+        <p>呼应"十五五"规划"以文塑旅、以旅彰文"导向，对接开封"一城宋韵·东京梦华"文旅目标，服务"行走河南·读懂中国"文化品牌建设。</p></div>
+      <div class="asec"><h3>◆ 申报团队</h3>
+        <p>河南大学文学院 · 齐梦帆（申报者）、叶新婷、王玉娇宁、卢依然、孔佑涵、耿心雨、何艺凡、刘珂萌　｜　依托：河南大学语言文字推广基地、宋文化研究院</p></div>
+    </div>
+  </div>
+</div>
+<div id="pass">
+  <div class="acard">
+    <button class="x" id="passX">✕</button>
+    <div class="ahead">
+      <div class="at1">梦华通关文牒</div>
+      <div class="at2">访遍十景 · 集齐十印 · 梦回东京</div>
+    </div>
+    <div class="abody">
+      <div class="pgrid" id="pgrid"></div>
+      <p class="pnote" id="pnote">点击地图上的景区即视为"到此一游"，自动盖下一枚金印。</p>
+      <button class="rt-go" id="passSave" style="margin-top:4px">🖼 保存通关文牒长图</button>
+    </div>
+  </div>
+</div>
+<div id="modal">
+  <div class="card">
+    <div class="art" id="cardArt"><button class="x" id="cardX">✕</button></div>
+    <div class="bd">
+      <span class="tag" id="cardTag"></span>
+      <h2 style="margin-top:8px;font-size:clamp(20px,5vw,26px);color:#000" id="cardName"></h2>
+      <p id="cardDesc"></p>
+      <div class="route" id="cardRoute"></div>
+      <details class="gj"><summary>📜 《东京梦华录》原文对照</summary><p id="gjText"></p></details>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   数据中心 DATA：scenery[景区] → cats[六大类] → words[{n,z,d,route,x,y,r}]
+   n=词名  z=分区  d=介绍  route=到达提示  x,y=词云坐标(%)  r=字号档
+   ===================================================================== */
+const CATS=[
+ {id:'arch', nm:'建筑', ico:'<svg viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label="宋式建筑"><title>宋式建筑</title><g fill="none" stroke="#F3E4A9" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 9.4 C4.4 7.2 7.4 5.8 12 5.4 C16.6 5.8 19.6 7.2 21.4 9.4"/><path d="M2.6 9.4 C5.5 8.5 9 8 12 8 C15 8 18.5 8.5 21.4 9.4"/><path d="M12 5.4 V3.2 M10.8 3.2 H13.2"/><path d="M4.6 9.4 V12.2 M19.4 9.4 V12.2"/><path d="M4.6 12.2 H19.4"/><path d="M6.6 12.2 V19.6 M17.4 12.2 V19.6"/><path d="M9.4 12.2 V16.2 M14.6 12.2 V16.2"/><path d="M9.4 16.2 H14.6"/><path d="M3.4 21.2 H20.6"/></g></svg>', c:'#3A362B'},
+ {id:'nat',  nm:'自然景观', ico:'<svg viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label="自然景观"><title>自然景观</title><g fill="none" stroke="#F3E4A9" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8.2 L3.8 12.2 H8.2 Z"/><path d="M6 11 L3.4 15.4 H8.6 Z"/><path d="M6 15.4 V20.4"/><path d="M18 8.2 L15.8 12.2 H20.2 Z"/><path d="M18 11 L15.4 15.4 H20.6 Z"/><path d="M18 15.4 V20.4"/><path d="M12 3.2 L9.4 7.6 H14.6 Z"/><path d="M12 6.6 L8.8 11.8 H15.2 Z"/><path d="M12 11.8 V18.4"/><path d="M4.4 20.8 H19.6"/></g></svg>', c:'#2F3A33'},
+ {id:'play', nm:'游乐', ico:'<svg viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label="游乐"><title>游乐</title><g fill="none" stroke="#F3E4A9" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 9.6 C9.4 8.4 10.6 7.8 12 7.8 C13.4 7.8 14.6 8.4 14.6 9.6"/><path d="M9.4 9.6 V17.2 C9.4 18.6 10.6 19.4 12 19.4 C13.4 19.4 14.6 18.6 14.6 17.2 V9.6"/><path d="M9.4 12.6 H14.6"/><path d="M16.4 3 V8"/><path d="M16.4 3 L18.8 2 M16.4 3 L14.2 2.2"/><path d="M16.6 8 L14.8 10.2"/><path d="M6.6 21 H17.4"/></g></svg>', c:'#3F3627'},
+ {id:'cost', nm:'演出服饰', ico:'<svg viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label="宋制汉服"><title>宋制汉服</title><g fill="none" stroke="#F3E4A9" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="3.3" r="1.2"/><path d="M10.1 4.5 C9.4 5.3 9.2 6.1 9.3 6.9"/><path d="M13.9 4.5 C14.6 5.3 14.8 6.1 14.7 6.9"/><path d="M9.3 6.9 L12 10.6 L14.7 6.9"/><path d="M9.3 6.9 C7 7.6 5.7 9.3 5.2 11.7 L4.5 15.4"/><path d="M14.7 6.9 C17 7.6 18.3 9.3 18.8 11.7 L19.5 15.4"/><path d="M4.5 15.4 C5.7 16.3 7 16.1 7.7 15.1 L8.2 14.2"/><path d="M19.5 15.4 C18.3 16.3 17 16.1 16.3 15.1 L15.8 14.2"/><path d="M9.3 6.9 C9.9 10.2 9.8 13.4 9.7 16.2"/><path d="M14.7 6.9 C14.1 10.2 14.2 13.4 14.3 16.2"/><path d="M8.7 12.3 L15.3 12.3"/><path d="M8.7 13.1 L15.3 13.1"/><path d="M9.7 16.2 L9.2 21.2 C10.6 21.7 13.4 21.7 14.8 21.2 L14.3 16.2"/></g></svg>', c:'#363041'},
+ {id:'food', nm:'饮食', ico:'<svg viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label="宋式饮食"><title>宋式饮食</title><g fill="none" stroke="#F3E4A9" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 11.4 H21.4"/><path d="M4.6 11.4 C4.6 16 7.8 19.2 12 19.2 C16.2 19.2 19.4 16 19.4 11.4"/><path d="M9.6 11.4 C10 9.2 10.8 7 12 5.2 C13.2 7 14 9.2 14.4 11.4"/><path d="M6 11.4 C6.6 8.4 8.4 6 12 4.4"/><path d="M18 11.4 C17.4 8.4 15.6 6 12 4.4"/><path d="M8.6 19.4 L8.2 21.4 M12 19.2 V21.4 M15.4 19.4 L15.8 21.4"/></g></svg>', c:'#3D3427'},
+ {id:'pub',  nm:'公共场合', ico:'<svg viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label="公共场合"><title>公共场合</title><g fill="none" stroke="#F3E4A9" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 21 V9.2 L12 4.6 L19.6 9.2 V21"/><path d="M2.8 21 H21.2"/><path d="M9.6 21 V14.2 H14.4 V21"/><path d="M9.6 17.2 H14.4"/><circle cx="12" cy="9.6" r="1.1"/><path d="M6.6 11.4 V13"/></g></svg>', c:'#2B323F'},
+];
+
+const DATA={
+/* ================= 清明上河园（词库完整版） ================= */
+'清明上河园':{pos:[17,17],sub:'大型宋文化主题公园',
+ arch:{list:[
+  {n:'迎宾门',z:'东区·迎宾广场',r:1,x:14,y:16,d:'清明上河园东大门、主入口，园区标志性门户。每日开园迎宾大典在此上演，包公率文武百官、仪仗迎接八方游客，是入园第一处宋式门楼建筑，也是园区大型集会表演核心场地。',route:'从园区东主入口直达，位于迎宾广场核心，开园前 30 分钟建议到此占位观赏迎宾大典。'},
+  {n:'张择端雕像',z:'东区·迎宾广场',r:2,x:30,y:10,d:'广场核心雕塑，塑造《清明上河图》作者张择端手捧画卷的形象，是整个园区文化开篇，象征以《清明上河图》为蓝本复建宋东京市井与皇家风貌。',route:'入迎宾门后步行约 3 分钟即达广场中央，与雕像合影为入园第一站。'},
+  {n:'铜雕版《清明上河图》',z:'东区·迎宾广场',r:2,x:32,y:24,d:'巨型铜质浮雕长卷，复刻《清明上河图》画面，把北宋东京繁华市井图景立体化呈现，是迎宾广场的文化展示载体。',route:'位于迎宾广场一侧，张择端雕像旁，入园后顺游线即可看到。'},
+  {n:'宋都广场',z:'东区·迎宾广场',r:2,x:22,y:30,d:'迎宾广场核心开阔场地，承接开园迎宾、节庆大型表演，营造北宋东京都城广场氛围，是园区入口集散空间。',route:'迎宾门内正对开阔区域，园内导览图标注为"宋都广场"。'},
+  {n:'东京码头',z:'东区·迎宾广场',r:2,x:10,y:32,d:'复原北宋汴河漕运码头，水上游船停靠与漕运表演的场所，再现当年汴河漕运繁忙景象，承接水上实景演出与游船通航。',route:'沿迎宾广场向西往汴河边步行约 5 分钟，可在此乘船。'},
+  {n:'梦回大宋体验馆',z:'东区·迎宾广场',r:3,x:12,y:22,d:'宋文化沉浸式体验场馆，现代配套仿宋风格建筑，提供宋制服饰、宋代生活等民俗沉浸体验空间。',route:'位于迎宾广场东南侧，入园后右侧即见，建议入园先换宋制服装。'},
+  {n:'大师坊',z:'东区·迎宾广场',r:3,x:6,y:14,d:'仿宋式坊舍建筑，文创与文化展示空间，承接传统工艺展示，烘托宋代坊市布局氛围。',route:'位于迎宾门北侧坊市街，步行 2 分钟。'},
+  {n:'汴河',z:'南苑·市井民俗区',r:1,x:44,y:40,d:'核心水系，《东京梦华录》重点记载的北宋东京漕运大动脉。清园以汴河串联南苑全部市井建筑群，水上行船、漕运表演，是整个南苑景观骨架。',route:'贯穿南苑全区，自东京码头沿河岸步道西行即入市井水岸线。'},
+  {n:'虹桥',z:'南苑·市井民俗区',r:1,x:52,y:46,d:'园区标志性核心景观桥，原型出自《东京梦华录》：无柱巨木虚架，宛如飞虹。桥上人流熙攘，是《清明上河图》最经典画面，清园原样复原，为打卡核心。',route:'位于汴河市井区中段，自上善门沿河南行 5 分钟；桥上为最佳拍摄点。'},
+  {n:'虹桥南广场',z:'南苑·市井民俗区',r:3,x:56,y:56,d:'虹桥南侧开阔广场，市井表演、杂耍、民俗展演活动场地，复刻虹桥两岸摩肩接踵的市井氛围。',route:'过虹桥即达南侧广场，关注园区演出时刻表。'},
+  {n:'平桥',z:'南苑·市井民俗区',r:3,x:40,y:50,d:'仿宋式平桥，跨汴河支流，方便两岸市井街坊通行，再现北宋东京多样桥梁形制。',route:'虹桥以西汴河支流之上，市井街巷间步行可达。'},
+  {n:'吊桥',z:'南苑·市井民俗区',r:3,x:36,y:44,d:'仿宋代可启闭吊桥，兼具通行与表演功能，配合水上演出开合，营造宋式水陆交通景观。',route:'汴河上游近上善门处，水上演出时段可观看吊桥启闭。'},
+  {n:'上善门',z:'南苑·市井民俗区',r:1,x:30,y:38,d:'南苑核心城门楼，原型为北宋汴河下水门"上善门"，为城郊与城内分界，城楼高大宏伟、彩绘壮丽，是《清明上河图》体系重要复原城门。',route:'市井区西端主城门，自虹桥沿主街西行约 8 分钟；可登城楼俯瞰汴河。'},
+  {n:'东京食坊',z:'南苑·市井民俗区',r:2,x:48,y:58,d:'仿宋食肆建筑群，复刻北宋东京酒楼食店，还原宋代市井食铺风貌与东京食客云集的饮食文化场景。',route:'虹桥南广场东侧市井街上，午餐时段人流集中。'},
+  {n:'大宋校场',z:'南苑·市井民俗区',r:2,x:62,y:38,d:'演武操练建筑群，开阔校场搭配演武看台，用于武术、马战、武打实景演出，展现宋代军营校场风貌。',route:'市井区东侧，自虹桥向东北步行约 6 分钟；《岳飞枪挑小梁王》等演出在此上演。'},
+  {n:'勾栏瓦肆',z:'南苑·市井民俗区',r:2,x:58,y:52,d:'《东京梦华录》记载的北宋市井演艺场所：瓦舍为市井娱乐区域，勾栏为其中演艺棚舍，杂耍、说唱、百戏表演的核心空间。',route:'虹桥南广场西侧，循鼓乐声即至，全天多场曲艺轮演。'},
+  {n:'彩楼欢门',z:'南苑·市井民俗区',r:3,x:50,y:62,d:'《东京梦华录》记载的酒楼标志性装饰门楼构架，宋代酒楼门前搭建华丽欢门以招揽食客，是北宋酒楼繁华标识。',route:'市井酒肆门前，东京食坊一带沿街可见。'},
+  {n:'水车园',z:'南苑·市井民俗区',r:3,x:34,y:56,d:'仿古水利景观建筑群，复原古代水车装置，展现宋代水利工艺，搭配水系景观体现古代生产技术。',route:'南苑西南水系沿岸，自平桥向西步行即达。'},
+  {n:'鸳鸯戏水桥',z:'南苑·市井民俗区',r:3,x:28,y:52,d:'造型精巧的园林观赏小品桥，跨水而建，丰富南苑水系园林景致。',route:'水车园附近支流之上，适合拍照小憩。'},
+  {n:'临街坊舍',z:'南苑·市井民俗区',r:3,x:44,y:32,d:'连片仿宋民居街坊，复刻北宋东京临街民居，错落排布，再现普通市民居住空间。',route:'上善门以东主街两侧连片分布。'},
+  {n:'市井店铺',z:'南苑·市井民俗区',r:3,x:38,y:34,d:'各式临街商铺建筑群，典当、杂货等多种业态，还原北宋坊市打破后临街开店的繁华市井面貌。',route:'贯穿市井区的主街两侧，边走边逛即可。'},
+  {n:'酒肆',z:'南苑·市井民俗区',r:3,x:54,y:34,d:'宋代酒楼建筑，北宋市井核心业态，与彩楼欢门相配，再现东京酒客往来、宴饮之风。',route:'市井主街与虹桥之间沿街分布。'},
+  {n:'作坊',z:'南苑·市井民俗区',r:3,x:34,y:62,d:'造纸坊、织锦坊等传统手工业作坊建筑群，复原宋代手工生产场所，现场展示传统工艺。',route:'南苑西南角作坊街，可观看造纸、织锦演示。'},
+  {n:'双亭桥',z:'南北分界',r:2,x:60,y:28,d:'南苑与北苑分界线，桥身平直，中间设吊桥通航，两侧建两座瓦亭供游人休憩；造型取《千里江山图》亭桥意境。',route:'位于南苑与北苑交界的主游线上，过桥即入皇家园林区。'},
+  {n:'景龙湖',z:'北苑·皇家园林区',r:1,x:74,y:22,d:'北苑中心大型皇家园林湖池，皇家建筑群环湖排布，承接大型水上皇家演出，营造皇家湖山园林格局。',route:'过双亭桥即入北苑，环湖步道全线贯通。'},
+  {n:'九龙桥',z:'北苑·皇家园林区',r:2,x:70,y:30,d:'北苑大型联拱石拱桥，体量宏大，跨景龙湖，为皇家园林标志性桥梁，桥上可俯瞰园林全景。',route:'景龙湖东南岸，双亭桥北行 5 分钟。'},
+  {n:'临水大殿',z:'北苑·皇家园林区',r:1,x:82,y:20,d:'皇家核心大殿，由宣和殿、宣德殿相连而成，与水心榭构成皇家观演建筑群，作为皇家贵宾观演包厢，取北宋临水殿宴饮观争标之意。',route:'景龙湖北岸，自九龙桥沿湖步道北行即达；《大宋·东京梦华》演出主视区。'},
+  {n:'水心榭',z:'北苑·皇家园林区',r:3,x:78,y:14,d:'临湖而立的榭式建筑，四面观景，与临水大殿配合，为皇家水上观演配套建筑。',route:'临水大殿东侧湖畔，经九曲步道可达。'},
+  {n:'拂云阁',z:'北苑·皇家园林区',r:1,x:88,y:26,d:'全园最高楼阁，高 31.99 米，明四暗三结构，朱红楼阁黄琉璃瓦。阁名双关：高耸拂云；拂去历史烟云重现《清明上河图》真貌，为全园制高点。',route:'景龙湖北岸西侧，可购票登阁俯瞰全园。'},
+  {n:'四方院',z:'北苑·皇家园林区',r:3,x:86,y:34,d:'园中之院、宫外之殿，为帝王后妃休憩、使臣礼节预演之所，体现"君临四方"的帝王气度。',route:'拂云阁以南皇家院落区内。'},
+  {n:'丹台宫',z:'北苑·皇家园林区',r:2,x:92,y:18,d:'园中之园，定位皇家少府监（皇家工艺科技机构），由厅堂、游廊、小桥池沼组合，内设造纸馆、织锦院、司南坊、火药馆，展示宋代科技成就。',route:'北苑东北角，自拂云阁东行约 5 分钟。'},
+  {n:'茗春坊',z:'北苑·皇家园林区',r:3,x:72,y:12,d:'景龙湖湖心坊式建筑，湖心观景休憩场所，内设古钱币博物馆。',route:'湖心位置，经湖上曲桥步行可达。'},
+  {n:'金水门',z:'园区出入口',r:3,x:6,y:34,d:'清明上河园西门，园区西侧入园通道，取自北宋东京金水门城门体系。',route:'位于园区西侧，西停车场方向游客多由此入园。'},
+  {n:'端门',z:'园区出入口',r:3,x:4,y:24,d:'园区西北侧入园大门，宋式门楼，配套游客服务设施。',route:'园区西北角，临近西北停车场。'},
+  {n:'丹凤门',z:'园区出入口',r:3,x:10,y:6,d:'园区东北侧入口，宋式风格大门，承担入园通行与游客服务。',route:'园区东北角，邻近龙亭西路。'},
+  {n:'通津门',z:'园区出入口',r:3,x:20,y:4,d:'原型为北宋汴河北水门"通津门"，重要水上门户，战略与漕运地位突出，清园复原水门形制。',route:'园区东北水门，自丹凤门沿园墙步行可达。'},
+ ]},
+ nat:{list:[
+  {n:'汴河春色',z:'南苑水系',r:1,x:30,y:40,d:'汴河两岸垂柳拂水，春日桃柳相间，再现"汴水东流无限春"的画境。',route:'东京码头至虹桥段河岸为最佳观赏线。'},
+  {n:'景龙湖',z:'北苑核心',r:1,x:66,y:24,d:'北苑皇家园林中心湖池，开阔水面倒映殿阁楼台，夜晚间大型水上演出灯光璀璨。',route:'双亭桥北侧即达环湖步道。'},
+  {n:'拂云阁视角',z:'北苑制高点',r:2,x:82,y:30,d:'登 31.99 米高的拂云阁俯瞰，全园湖光殿影一览无余，为全园最佳观景平台。',route:'拂云阁内设登阁通道，需另行购票。'},
+  {n:'水车园湿地',z:'南苑西南',r:3,x:22,y:54,d:'水车缓缓转动、蒲苇摇曳，展现宋代水利与水乡湿地意趣。',route:'南苑西南角水系沿岸。'},
+  {n:'御河柳岸',z:'园区河段',r:3,x:14,y:44,d:'河岸垂柳成行，画舫缓行，暮色中灯笼初上是园区最富诗意的水岸。',route:'园区南侧临河步道。'},
+ ]},
+ play:{list:[
+  {n:'开园迎宾大典',z:'迎宾广场',r:1,x:24,y:20,d:'每日开园仪式，包公率文武百官仪仗迎宾，宋式鼓乐齐鸣，为全园演出开篇。',route:'开园时间于迎宾门内宋都广场上演，建议提前 20 分钟到场。'},
+  {n:'岳飞枪挑小梁王',z:'大宋校场',r:2,x:56,y:44,d:'大型马战实景演出，真马真枪再现宋代演武比试的激烈场面。',route:'大宋校场看台，按演出时刻表入场。'},
+  {n:'包公巡视汴河漕运',z:'东京码头',r:2,x:40,y:30,d:'水上实景演出，再现包公巡河、漕运繁忙的北宋盛景。',route:'东京码头水域沿岸观看。'},
+  {n:'王员外招婿',z:'勾栏瓦肆',r:3,x:66,y:56,d:'互动喜剧，绣球抛掷、游客参与拜堂，笑声不断的市井民俗体验。',route:'勾栏瓦肆演艺区，场次密集。'},
+  {n:'斗鸡 · 木偶戏',z:'市井广场',r:3,x:48,y:66,d:'宋代百戏杂耍轮番上演，斗鸡、木偶、皮影尽显市井烟火气。',route:'虹桥南广场与市井街区巡回演出。'},
+  {n:'《大宋·东京梦华》',z:'景龙湖',r:1,x:76,y:16,d:'大型水上实景演出，700 余名演员以景龙湖为舞台，再现北宋盛世的繁华与风雅，为园区夜游压轴之作。',route:'晚间于景龙湖水上剧场上演，需另行购票，临水大殿一带为观演核心区。'},
+ ]},
+ cost:{list:[
+  {n:'宋制襕衫',z:'士人常服',r:2,x:20,y:30,d:'直领对襟、上下通裁的士人常服，是园区男子体验装首选。',route:'梦回大宋体验馆及园内各租装点可租借。'},
+  {n:'宋制褙子',z:'女子常服',r:1,x:34,y:22,d:'对襟直领、两侧开衩的宋代女子标志性服饰，清雅飘逸，拍照出片率最高。',route:'园内汉服租赁点均有，含妆造套餐。'},
+  {n:'包公官服蟒袍',z:'官员朝服',r:2,x:48,y:34,d:'黑底金蟒、月牙额饰的包公形象服饰，迎宾大典与巡游演出中的视觉焦点。',route:'演出演员着装，游客可在迎宾大典后合影。'},
+  {n:'禁军铠甲',z:'军士戎服',r:3,x:60,y:26,d:'宋式步人甲与禁军戎服，大宋校场演出的厚重戎装。',route:'大宋校场演武区可见，部分项目提供试穿拍照。'},
+  {n:'瓦肆艺人彩衣',z:'市井百戏装',r:3,x:72,y:40,d:'勾栏瓦肆艺人色彩明快的演出服，源自《东京梦华录》所载百戏装束。',route:'勾栏瓦肆演出时段欣赏。'},
+ ]},
+ food:{list:[
+  {n:'东京食坊',z:'南苑食肆',r:1,x:28,y:52,d:'园区核心餐饮区，复刻北宋东京酒楼食店格局，汇集各类宋式小吃与正餐。',route:'虹桥南广场东侧，正午前后人流最多。'},
+  {n:'灌汤包',z:'汴梁名吃',r:1,x:44,y:46,d:'开封第一楼风味灌汤小笼包，皮薄馅大、汤汁丰盈，"先开窗、后喝汤"。',route:'东京食坊及园区各食铺均有售卖。'},
+  {n:'杏仁茶',z:'市井甜饮',r:2,x:58,y:60,d:'宋代传下的经典甜饮，杏仁磨浆熬制，暖香细腻。',route:'市井街区小吃摊与东京食坊。'},
+  {n:'炒凉粉',z:'街头热食',r:2,x:14,y:56,d:'开封街头名小吃，凉粉加豆瓣酱翻炒，焦香软糯。',route:'市井街小吃摊现炒现卖。'},
+  {n:'宋式茶坊',z:'清雅茶肆',r:3,x:70,y:50,d:'仿宋茶肆，可体验点茶、茶百戏等宋代茶文化。',route:'北苑茗春坊及市井街均有茶坊。'},
+ ]},
+ pub:{list:[
+  {n:'游客服务中心',z:'迎宾广场',r:1,x:20,y:14,d:'提供咨询、寄存、轮椅婴儿车租借、导览图与演出时刻表。',route:'迎宾门内右侧，入园即见。'},
+  {n:'第三卫生间 · 母婴室',z:'全园分布',r:2,x:38,y:20,d:'主要节点设第三卫生间与母婴室，设施齐全。',route:'迎宾广场、东京食坊、景龙湖三处主要点位。'},
+  {n:'医疗点',z:'北苑服务区',r:3,x:56,y:18,d:'配备急救药品与AED，医护值守。',route:'景龙湖东岸游客服务点旁。'},
+  {n:'宋韵休憩亭',z:'全域散布',r:3,x:26,y:36,d:'仿宋凉亭遍布游线，遮阳避雨、随时小憩。',route:'主游线每 300 米左右一处。'},
+  {n:'失物招领处',z:'游客中心内',r:3,x:10,y:18,d:'拾遗物品统一登记保管，与广播寻人服务联动。',route:'迎宾门游客服务中心内。'},
+ ]},
+},
+/* ================= 万岁山·大宋武侠城 ================= */
+'万岁山·大宋武侠城':{pos:[9,22],sub:'大宋武侠主题景区',
+ arch:{list:[
+  {n:'武侠城寨门',z:'主入口',r:1,x:30,y:20,d:'仿宋寨门式主入口，悬"大宋武侠城"匾额，江湖气扑面。',route:'公园南路主入口直达。'},
+  {n:'聚贤庄',z:'核心场院',r:2,x:55,y:25,d:'大型武打演出场院，庄院式建筑群。',route:'入园主轴前行 5 分钟。'},
+  {n:'三打祝家庄',z:'实景战区',r:1,x:75,y:22,d:'大型攻城实景演出场地，城墙、吊桥、战车俱全。',route:'园区深处战区，按演出场次入场。'},
+  {n:'城寨街巷',z:'市井武街',r:3,x:45,y:45,d:'仿宋街巷，武馆、镖局、客栈林立。',route:'核心区环线步行可达。'},
+  {n:'江湖客栈',z:'主题住宿',r:3,x:65,y:55,d:'武侠主题客栈，可体验"住进江湖"。',route:'园区东侧住宿区。'},
+ ]},
+ nat:{list:[
+  {n:'万岁山森林',z:'山地林区',r:1,x:25,y:55,d:'开封城北沙丘林地改造的森林景观，绿荫浓密，为市区天然氧吧。',route:'园区西侧林地步道。'},
+  {n:'百鸟林',z:'动物互动区',r:2,x:60,y:65,d:'孔雀、鹦鹉等鸟类互动观赏林。',route:'森林区南侧。'},
+  {n:'溪涧水景',z:'林间水系',r:3,x:40,y:65,d:'林间溪流叠水，夏日清凉。',route:'林地步道沿途。'},
+ ]},
+ play:{list:[
+  {n:'三打祝家庄',z:'王牌实景',r:1,x:70,y:14,d:'大型攻城马战实景演出，爆破、马战、攻城水陆并进，被誉为"最具沉浸感"的宋战演出。',route:'实景战区看台，旺季每日多场，提前 30 分钟占座。'},
+  {n:'武侠快闪打斗',z:'街巷演出',r:2,x:50,y:35,d:'街巷随时爆发的武侠打斗快闪，与游客近距离互动。',route:'城寨街巷巡游演出。'},
+  {n:'飞刀 · 吐火绝技',z:'杂技专场',r:3,x:36,y:40,d:'江湖绝技轮番登场。',route:'聚贤庄场院。'},
+  {n:'大唐小女江湖行',z:'亲子互动',r:3,x:80,y:40,d:'亲子剧情互动演出。',route:'亲子乐园区。'},
+ ]},
+ cost:{list:[
+  {n:'侠客劲装',z:'武侠风格',r:2,x:30,y:35,d:'劲装束袖、佩剑背刀的侠客造型。',route:'园区入口租赁点。'},
+  {n:'官兵戎服',z:'演出服',r:3,x:55,y:45,d:'攻城演出官兵甲胄。',route:'实景战区可见。'},
+  {n:'女侠红衣',z:'热门妆造',r:1,x:75,y:50,d:'红衣女侠造型，园区最热门妆造之一。',route:'园内妆造馆可全套租赁。'},
+ ]},
+ food:{list:[
+  {n:'武侠大碗酒',z:'主题餐饮',r:2,x:40,y:55,d:'大碗喝酒、大块吃肉的江湖主题餐饮。',route:'城寨街食肆区。'},
+  {n:'开封锅贴',z:'本地小吃',r:3,x:60,y:35,d:'底部焦脆的灌汤锅贴。',route:'街巷小吃摊。'},
+  {n:'烤肉串坊',z:'烟火食街',r:3,x:25,y:45,d:'炭火现烤的市井食街。',route:'食街中段。'},
+ ]},
+ pub:{list:[
+  {n:'游客中心',z:'主入口',r:2,x:18,y:25,d:'咨询、寄存、租装一站式服务。',route:'寨门内侧。'},
+  {n:'公共厕所',z:'全域分布',r:3,x:50,y:60,d:'主要片区均有设置，标识清晰。',route:'沿主游线分布。'},
+  {n:'医务室',z:'核心区',r:3,x:70,y:60,d:'演出日加强值守。',route:'聚贤庄附近。'},
+ ]},
+},
+/* ================= 龙亭景区 ================= */
+'龙亭景区':{pos:[29,29],sub:'宋都皇城遗址 · 古建筑群',
+ arch:{list:[
+  {n:'龙亭大殿',z:'核心建筑',r:1,x:50,y:20,d:'建于 13 米高台之上的重檐歇山式大殿，是宋都皇城遗址的标志性建筑，登殿可俯瞰潘杨二湖。',route:'午门入内沿中轴直行，登 72 级御道台阶即达。'},
+  {n:'午门',z:'南入口',r:2,x:50,y:70,d:'景区南大门，仿宋宫门式样，为游览起点。',route:'宋都御街北端正对即达。'},
+  {n:'玉带桥',z:'中轴桥',r:2,x:50,y:52,d:'横跨潘杨二湖连通水道的拱桥，形如玉带。',route:'中轴线上，过朝门即见。'},
+  {n:'朝门 · 东西朝房',z:'仪仗建筑',r:3,x:50,y:42,d:'大殿前仪仗性门殿与廊房。',route:'中轴依次可见。'},
+  {n:'潘杨二湖',z:'湖面建筑带',r:3,x:30,y:52,d:'"潘湖浑、杨湖清"的民间传说让两湖成为龙亭最有趣的水景。',route:'玉带桥两侧湖岸。'},
+ ]},
+ nat:{list:[
+  {n:'潘家湖',z:'西湖面',r:2,x:22,y:45,d:'湖面开阔，倒映龙亭大殿。',route:'玉带桥西侧湖岸环湖步道。'},
+  {n:'杨家湖',z:'东湖面',r:2,x:78,y:45,d:'民间传"杨湖清"，水质清冽，游船往来。',route:'玉带桥东侧码头可乘船。'},
+  {n:'龙亭古柳',z:'湖滨古树',r:3,x:15,y:30,d:'湖滨百年垂柳，春日如烟。',route:'环湖步道西段。'},
+ ]},
+ play:{list:[
+  {n:'菊花文化节主会场',z:'秋季花事',r:1,x:60,y:30,d:'每年 10—11 月中国开封菊花文化节主展区，千万菊花争艳，龙亭为最核心展场。',route:'秋季全园布展，主要展区在御道两侧与殿前广场。'},
+  {n:'宋宫廷游乐表演',z:'常态演出',r:2,x:40,y:35,d:'皇帝迎宾、宫廷乐舞等演出。',route:'殿前广场按时刻表上演。'},
+  {n:'夜间灯光秀',z:'夜游项目',r:3,x:75,y:25,d:'节庆期间大殿灯光点亮，湖面灯影璀璨。',route:'夜场开放时段购票入园。'},
+ ]},
+ cost:{list:[
+  {n:'皇帝龙袍',z:'宫廷服饰',r:1,x:55,y:12,d:'明黄龙袍、冕旒冠冕的帝王形象，迎宾演出核心装束。',route:'演出演员着装，可合影。'},
+  {n:'宫娥襦裙',z:'宫廷女服',r:2,x:35,y:20,d:'宫廷乐舞宫娥的齐腰襦裙。',route:'宫廷演出中欣赏。'},
+  {n:'宋代平民布衣',z:'市井服饰',r:3,x:70,y:60,d:'粗布短褐，体现宋民风貌。',route:'园内租赁点可选。'},
+ ]},
+ food:{list:[
+  {n:'宫廷御宴体验',z:'主题餐饮',r:2,x:30,y:65,d:'仿宋宫廷宴席体验。',route:'景区周边御街一带餐厅。'},
+  {n:'汴京烤鸭',z:'名菜',r:2,x:70,y:68,d:'历史悠久的汴京风味烤鸭。',route:'御街及附近老字号。'},
+  {n:'糖画 · 吹糖人',z:'市井小吃',r:3,x:15,y:60,d:'民俗手艺与甜口的结合。',route:'午门内外摊位。'},
+ ]},
+ pub:{list:[
+  {n:'游客服务中心',z:'午门内侧',r:2,x:42,y:72,d:'咨询、寄存、讲解预约。',route:'午门内左侧。'},
+  {n:'公共厕所',z:'中轴两侧',r:3,x:60,y:55,d:'朝门与殿前广场附近均有。',route:'沿中轴标识。'},
+  {n:'休息长廊',z:'湖滨',r:3,x:20,y:35,d:'湖滨遮荫长椅与廊亭。',route:'环湖步道。'},
+ ]},
+},
+/* ================= 铁塔公园 ================= */
+'铁塔公园':{pos:[62,14],sub:'天下第一塔 · 佑国寺遗址',
+ arch:{list:[
+  {n:'铁塔（开宝寺塔）',z:'核心建筑',r:1,x:50,y:22,d:'建于北宋皇祐元年（1049 年），高 55.88 米，因通体镶嵌褐色琉璃砖似铁色得名，历经地震水患屹立近千年，被誉为"天下第一塔"。',route:'入园沿中轴直行即达塔下，可近观琉璃砖上的飞天、麒麟等浮雕。'},
+  {n:'接引殿',z:'中轴大殿',r:2,x:50,y:55,d:'殿内供奉北宋接引佛铜像。',route:'铁塔以南中轴线上。'},
+  {n:'铁塔湖 · 石桥',z:'水景建筑',r:3,x:20,y:40,d:'塔影湖光相映的石桥水景。',route:'公园西北湖面。'},
+  {n:'灵感院',z:'院落区',r:3,x:75,y:50,d:'仿古院落，白玉佛雕塑坐落其中。',route:'铁塔东南院落区。'},
+  {n:'盆景苑',z:'园林建筑',r:3,x:80,y:30,d:'集中展示中原盆景艺术。',route:'园区东侧。'},
+ ]},
+ nat:{list:[
+  {n:'铁塔湖',z:'湖景',r:1,x:18,y:30,d:'湖面倒映千年铁塔，是拍摄塔身全景的最佳位置。',route:'公园西北湖岸，晨昏光线最佳。'},
+  {n:'银杏古树',z:'秋季名景',r:2,x:75,y:18,d:'深秋金黄银杏与铁塔同框，为开封名景。',route:'塔后及接引殿附近。'},
+  {n:'荷塘',z:'夏季水景',r:3,x:30,y:60,d:'夏日荷香满塘。',route:'接引殿南侧水塘。'},
+ ]},
+ play:{list:[
+  {n:'铁塔光影秀',z:'夜游项目',r:1,x:65,y:35,d:'以铁塔为幕的光影演出，演绎千年建塔传奇。',route:'夜场开放时段于塔前广场观看。'},
+  {n:'登塔远眺',z:'特色体验',r:2,x:40,y:35,d:'沿塔内砖砌蹬道旋转而上，开窗即见古城全景（开放情况以当日公告为准）。',route:'塔下购票登塔。'},
+  {n:'汴京灯笼张展',z:'非遗体验',r:3,x:82,y:60,d:'国家级非遗汴京灯笼张的花灯艺术展。',route:'园区展馆内。'},
+ ]},
+ cost:{list:[
+  {n:'宋代僧衣',z:'宗教服饰',r:2,x:30,y:45,d:'寺院场景中的僧侣服饰。',route:'文化展陈中欣赏。'},
+  {n:'宋制圆领袍',z:'常服',r:3,x:60,y:60,d:'宋代男子标准圆领袍衫。',route:'园内租赁点。'},
+  {n:'飞天纹样服饰',z:'文创衍生',r:3,x:80,y:42,d:'取自塔身飞天砖雕纹样的文创服饰。',route:'文创商店有售。'},
+ ]},
+ food:{list:[
+  {n:'素斋馆',z:'寺院餐饮',r:2,x:65,y:68,d:'清爽素斋体验。',route:'园区东南餐饮区。'},
+  {n:'汴梁西瓜',z:'时令果品',r:3,x:35,y:68,d:'开封名产，沙瓤甘甜。',route:'园区摊点夏季供应。'},
+  {n:'花生糕',z:'传统茶点',r:3,x:15,y:55,d:'开封传统酥香茶点。',route:'园内商店与摊位。'},
+ ]},
+ pub:{list:[
+  {n:'游客中心',z:'大门内侧',r:2,x:50,y:75,d:'咨询寄存服务。',route:'公园正门内。'},
+  {n:'公共厕所',z:'中轴两侧',r:3,x:60,y:50,d:'接引殿附近为主要点位。',route:'沿中轴标识。'},
+  {n:'无障碍通道',z:'全园',r:3,x:35,y:30,d:'主要游览线均设无障碍坡道。',route:'自大门至铁塔广场。'},
+ ]},
+},
+/* ================= 翰园碑林 ================= */
+'中国翰园碑林':{pos:[23,25],sub:'书法文化名园',
+ arch:{list:[
+  {n:'碑廊建筑群',z:'核心展区',r:1,x:50,y:25,d:'3700 余块书法碑刻镶嵌于曲折碑廊，纵贯中国书法史。',route:'入园沿碑廊环线参观，全程约 40 分钟。'},
+  {n:'仰圣山',z:'山水标志',r:2,x:70,y:25,d:'人造山体与瀑布结合的园区制高点。',route:'园区北部，可登顶俯瞰。'},
+  {n:'翰园艺术馆',z:'展馆',r:2,x:30,y:40,d:'书画主题展馆。',route:'入口区西侧。'},
+  {n:'文萃山',z:'园林建筑',r:3,x:78,y:50,d:'亭台错落的园林山体。',route:'仰圣山东侧。'},
+  {n:'碑坛',z:'仪式空间',r:3,x:50,y:60,d:'纪念书法圣坛式建筑。',route:'中轴南端。'},
+ ]},
+ nat:{list:[
+  {n:'翰园湖',z:'水景',r:2,x:22,y:30,d:'湖面平静，环湖皆碑刻景致。',route:'园区西侧环湖步道。'},
+  {n:'人工瀑布',z:'仰圣山景',r:2,x:68,y:32,d:'自仰圣山飞泻而下，为北方园林少见水景。',route:'仰圣山北麓。'},
+  {n:'竹林幽径',z:'园林小景',r:3,x:82,y:65,d:'竹林夹道，墨香竹韵。',route:'园区东南角。'},
+ ]},
+ play:{list:[
+  {n:'拓片体验',z:'非遗互动',r:1,x:40,y:30,d:'亲手拓印碑刻，带走自己的"书法作品"。',route:'碑廊体验区，全日常态开放。'},
+  {n:'书法研学课堂',z:'研学项目',r:2,x:60,y:42,d:'面向青少年的书法研学与描红体验。',route:'翰园艺术馆内，需预约。'},
+  {n:'曲水流觞雅集',z:'文化活动',r:3,x:72,y:60,d:'复原兰亭雅集的文人游戏。',route:'活动季在水系园区举办。'},
+ ]},
+ cost:{list:[
+  {n:'文人深衣',z:'雅士服饰',r:2,x:30,y:25,d:'宋代文人深衣，配笔墨道具极具氛围。',route:'园内租赁点可选。'},
+  {n:'书童短打',z:'童趣服饰',r:3,x:55,y:32,d:'亲子体验热门款。',route:'租赁点亲子套装。'},
+  {n:'仕女披帛',z:'雅集服饰',r:3,x:75,y:42,d:'披帛襦裙配纸伞，出片利器。',route:'租赁点可选。'},
+ ]},
+ food:{list:[
+  {n:'翰园茶舍',z:'茶饮',r:2,x:35,y:55,d:'临水茶舍，可小坐写字观湖。',route:'翰园湖畔。'},
+  {n:'文房点心',z:'文创茶点',r:3,x:62,y:68,d:'笔墨纸砚造型的文创糕点。',route:'园区文创店。'},
+  {n:'素面馆',z:'简餐',r:3,x:20,y:60,d:'一碗清汤素面配碑林雅意。',route:'园区餐饮区。'},
+ ]},
+ pub:{list:[
+  {n:'游客服务中心',z:'入口区',r:2,x:45,y:70,d:'咨询、拓片工具租借。',route:'正门内侧。'},
+  {n:'公共厕所',z:'碑廊沿线',r:3,x:65,y:55,d:'碑廊两端均有。',route:'循标识。'},
+  {n:'书法休息椅',z:'全域',r:3,x:28,y:45,d:'椅背刻名句，休息亦受墨香熏陶。',route:'碑廊与湖岸沿线。'},
+ ]},
+},
+/* ================= 大宋御河 ================= */
+'大宋御河':{pos:[33,44],sub:'水上旅游线路',
+ arch:{list:[
+  {n:'十一座宋式桥梁',z:'桥梁群',r:1,x:50,y:30,d:'御河串联十一座造型各异的宋式桥梁，被誉为"中国宋式桥梁博物馆"。',route:'全线乘船或沿岸步行逐一观赏。'},
+  {n:'包公祠码头',z:'南端码头',r:2,x:35,y:70,d:'御河南端起航码头。',route:'包公湖西侧包公祠旁。'},
+  {n:'清园码头',z:'北端码头',r:2,x:60,y:12,d:'御河北端码头，连接清明上河园。',route:'清明上河园南侧。'},
+  {n:'七盛角',z:'滨水街区',r:2,x:25,y:40,d:'仿宋滨水商业街区。',route:'御河西岸中段。'},
+  {n:'兴济桥',z:'代表性桥梁',r:3,x:48,y:55,d:'御河上体量最大的桥梁之一。',route:'河心段主游线。'},
+ ]},
+ nat:{list:[
+  {n:'一水连五景',z:'水线景观',r:1,x:55,y:40,d:'御河连通龙亭湖、包公湖等五大湖区，一水串起古城精华。',route:'全线游船体验最佳。'},
+  {n:'两岸垂柳灯影',z:'夜景观赏带',r:1,x:40,y:35,d:'入夜灯笼摇曳、桨声灯影，为开封夜游第一水线。',route:'晚间游船班次最密集。'},
+  {n:'荷花水道',z:'夏季水景',r:3,x:65,y:60,d:'夏季河道两侧荷香阵阵。',route:'南段水域。'},
+ ]},
+ play:{list:[
+  {n:'御河画舫夜游',z:'王牌项目',r:1,x:50,y:20,d:'乘仿宋画舫夜游御河，船上有宋词吟唱与茶点，全程约 50 分钟。',route:'包公祠码头或清园码头购票上船，建议提前预约晚间班次。'},
+  {n:'宋词乐舞船演',z:'船上演出',r:2,x:35,y:25,d:'画舫上的宋词吟唱、乐舞表演。',route:'夜游航班配套演出。'},
+  {n:'沿岸汉服巡游',z:'节庆活动',r:3,x:65,y:30,d:'节庆期间沿岸汉服巡游与灯会。',route:'节庆晚间沿岸观赏。'},
+ ]},
+ cost:{list:[
+  {n:'船娘宋装',z:'服务服饰',r:2,x:30,y:22,d:'画舫船娘的宋制服饰与吟唱。',route:'游船上欣赏。'},
+  {n:'游客汉服套餐',z:'体验装',r:1,x:62,y:45,d:'夜游+汉服妆造套餐，穿宋装入画舫。',route:'七盛角及周边妆造馆可办。'},
+  {n:'官船仪仗',z:'节庆服饰',r:3,x:45,y:65,d:'节庆巡游中的宋代官船仪仗装束。',route:'节庆活动期间沿岸可见。'},
+ ]},
+ food:{list:[
+  {n:'七盛角食街',z:'餐饮街区',r:1,x:22,y:48,d:'滨水仿宋食街，小吃与餐厅聚集。',route:'御河西岸中段，游船中途上岸即达。'},
+  {n:'船上茶点',z:'游船配套',r:2,x:58,y:28,d:'夜游航班赠送的宋式茶点。',route:'上船即享。'},
+  {n:'汴京夜市小吃',z:'夜宵',r:3,x:42,y:60,d:'鼓楼夜市方向小吃延伸。',route:'御河中段下船步行约 10 分钟。'},
+ ]},
+ pub:{list:[
+  {n:'游船售票处',z:'码头',r:2,x:38,y:18,d:'全线船票销售与班次查询。',route:'两端码头均设。'},
+  {n:'滨水公厕',z:'沿岸',r:3,x:52,y:50,d:'各码头与街区均配建。',route:'循沿岸标识。'},
+  {n:'亲水平台',z:'休憩设施',r:3,x:28,y:58,d:'临水观景平台，安全护栏齐全。',route:'七盛角一带。'},
+ ]},
+},
+/* ================= 开封府 ================= */
+'开封府':{pos:[38,52],sub:'北宋天下首府',
+ arch:{list:[
+  {n:'府门 · 仪门',z:'中轴门户',r:2,x:30,y:70,d:'开封府南向正门与仪门，"开封府"匾额高悬。',route:'向阳路主入口进入即达。'},
+  {n:'正厅（戒石铭）',z:'核心大堂',r:1,x:50,y:40,d:'府尹升堂断案之所，"尔俸尔禄，民膏民脂"戒石铭立于堂前，包公断案演出在此上演。',route:'中轴第二进院落，正对主游线。'},
+  {n:'梅花堂',z:'包公倒坐堂',r:2,x:70,y:35,d:'相传包公"倒坐南衙"在此受理民间案件。',route:'正厅后院东侧。'},
+  {n:'清心楼',z:'最高建筑',r:1,x:65,y:20,d:'府内最高楼阁，可登楼俯瞰全府与包公湖。',route:'府内东北部，可购票登楼。'},
+  {n:'明礼院 · 桂籍堂',z:'科举展区',r:3,x:35,y:22,d:'展示北宋开封府科举文化。',route:'中轴西侧院落。'},
+ ]},
+ nat:{list:[
+  {n:'府衙花园',z:'园林',r:2,x:75,y:50,d:'府内幽静花园，假山曲池。',route:'府内西北部。'},
+  {n:'包公湖水岸',z:'外湖景',r:1,x:20,y:45,d:'开封府西临包公湖，湖光塔影衬府衙。',route:'出府西门即达湖岸步道。'},
+  {n:'潜龙宫竹影',z:'庭院小景',r:3,x:55,y:60,d:'潜龙宫庭院竹影婆娑。',route:'府内东南院落。'},
+ ]},
+ play:{list:[
+  {n:'包公断案',z:'王牌演出',r:1,x:52,y:32,d:'正厅实景演出，包公升堂断案，游客可扮"证人"参与。',route:'正厅前广场，每日多场，留意演出时刻表。'},
+  {n:'包公迎宾',z:'开府仪式',r:2,x:35,y:62,d:'每日开府仪式，包公率衙役出迎。',route:'府门广场，上午开园时段。'},
+  {n:'榜前捉婿',z:'互动演出',r:3,x:72,y:58,d:'科举主题互动喜剧，游客可被"捉"为新科婿。',route:'明礼院一带。'},
+ ]},
+ cost:{list:[
+  {n:'包公蟒袍',z:'官服',r:1,x:45,y:15,d:'黑蟒袍、月牙额的包公经典形象。',route:'演出后可与"包公"合影。'},
+  {n:'衙役皂衣',z:'差服',r:3,x:62,y:30,d:'水火棍衙役的皂色短打。',route:'断案演出中欣赏。'},
+  {n:'宋制女帔',z:'体验装',r:2,x:75,y:15,d:'府内提供的宋制女子体验服。',route:'府内租赁点。'},
+ ]},
+ food:{list:[
+  {n:'府衙食肆',z:'园内餐饮',r:3,x:48,y:68,d:'仿宋快餐与开封小吃。',route:'府内南部餐饮区。'},
+  {n:'鲤鱼焙面',z:'名菜',r:2,x:25,y:55,d:'"糖醋软熘鲤鱼焙面"，开封名馔。',route:'府外周边餐馆。'},
+  {n:'红薯泥',z:'传统甜食',r:3,x:70,y:68,d:'开封传统甜菜，绵密香甜。',route:'周边老字号。'},
+ ]},
+ pub:{list:[
+  {n:'游客中心',z:'府门外',r:2,x:25,y:75,d:'咨询、讲解、寄存。',route:'正门广场西侧。'},
+  {n:'公共厕所',z:'各进院落',r:3,x:55,y:48,d:'中轴两侧均有。',route:'循院内标识。'},
+  {n:'警务室 · 医务点',z:'门区',r:3,x:20,y:68,d:'门区安全服务点位。',route:'府门东侧。'},
+ ]},
+},
+/* ================= 包公湖 / 包公祠 ================= */
+'包公湖（包公祠）':{pos:[23,52],sub:'包公文化核心区',
+ arch:{list:[
+  {n:'包公祠',z:'核心建筑',r:1,x:35,y:40,d:'为纪念包拯而建的仿宋祠堂，陈列包公生平与包公文化。',route:'包公湖西岸，向阳路侧入口进入。'},
+  {n:'二殿 · 东西配殿',z:'祠内展区',r:2,x:55,y:35,d:'展示包公家训、传说与历代评述。',route:'祠内中轴两侧。'},
+  {n:'包公亭',z:'湖畔亭',r:3,x:45,y:60,d:'临湖小亭，观湖休憩。',route:'祠后湖岸。'},
+  {n:'廉泉井亭',z:'文化小品',r:3,x:28,y:28,d:'取"廉泉让水"之意的井亭。',route:'祠内东侧。'},
+  {n:'湖心岛亭廊',z:'湖上建筑',r:3,x:65,y:55,d:'湖心岛上的亭廊建筑。',route:'环湖步道经桥可达。'},
+ ]},
+ nat:{list:[
+  {n:'包公西湖',z:'湖面',r:1,x:25,y:55,d:'开阔湖面，环湖绿道成熟，是市民与游客晨昏散步胜地。',route:'环湖步道全线开放，西岸观景最佳。'},
+  {n:'包公东湖',z:'湖面',r:2,x:55,y:45,d:'与西湖相对，湖畔垂柳与开封府相望。',route:'环湖路东段。'},
+  {n:'湖畔樱花道',z:'春景',r:3,x:15,y:38,d:'春季湖畔花道。',route:'环湖步道西段。'},
+ ]},
+ play:{list:[
+  {n:'包公生平展',z:'文化参观',r:1,x:42,y:30,d:'以展陈讲述包拯履职开封府的清正故事。',route:'包公祠内，参观约 1 小时。'},
+  {n:'环湖骑行漫步',z:'休闲项目',r:2,x:60,y:65,d:'环湖绿道散步骑行，串联开封府与御河。',route:'环湖路全线。'},
+  {n:'湖上游船',z:'水上游乐',r:3,x:20,y:62,d:'脚踏船画舫游湖。',route:'西岸码头。'},
+ ]},
+ cost:{list:[
+  {n:'包公戏服',z:'戏曲服饰',r:2,x:35,y:25,d:'豫剧包公戏黑蟒靠旗装束。',route:'祠内展陈欣赏。'},
+  {n:'宋民布衫',z:'体验装',r:3,x:58,y:28,d:'环湖汉服街拍热门素色布衫。',route:'周边租赁点。'},
+  {n:'衙役帽翅',z:'文创头饰',r:3,x:70,y:35,d:'包公题材文创小头饰。',route:'祠前文创店。'},
+ ]},
+ food:{list:[
+  {n:'第一楼灌汤包',z:'老字号',r:1,x:30,y:70,d:'百年老字号灌汤包总店风味。',route:'包公湖南路附近门店。'},
+  {n:'桶子鸡',z:'开封名吃',r:2,x:55,y:70,d:'马豫兴桶子鸡，咸香脆嫩。',route:'周边老字号门店。'},
+  {n:'湖畔茶摊',z:'休闲饮点',r:3,x:15,y:55,d:'环湖茶摊与冷饮。',route:'环湖步道沿线。'},
+ ]},
+ pub:{list:[
+  {n:'游客中心',z:'包公祠门区',r:2,x:32,y:35,d:'咨询寄存。',route:'包公祠正门内。'},
+  {n:'环湖公厕',z:'环湖分布',r:3,x:48,y:48,d:'环湖步道多点位设置。',route:'循绿道标识。'},
+  {n:'湖岸救援点',z:'安全设施',r:3,x:62,y:50,d:'救生设备与警示系统沿湖布设。',route:'亲水平台附近。'},
+ ]},
+},
+/* ================= 禹王台公园 ================= */
+'禹王台公园':{pos:[54,59],sub:'古吹台 · 千年名园',
+ arch:{list:[
+  {n:'古吹台',z:'核心古迹',r:1,x:50,y:30,d:'相传春秋晋国乐师师旷在此吹奏，故称古吹台；明代建禹王庙后称禹王台，李白、杜甫、高适曾同登吹台赋诗。',route:'入园沿主路直行，登台即见三贤祠。'},
+  {n:'禹王庙',z:'台顶建筑',r:1,x:60,y:22,d:'纪念大禹治水的庙宇，殿内供禹王像。',route:'古吹台台顶。'},
+  {n:'三贤祠',z:'纪念建筑',r:2,x:40,y:25,d:'纪念李白、杜甫、高适吹台相会。',route:'古吹台东侧配殿。'},
+  {n:'御书楼',z:'藏帖楼',r:3,x:70,y:35,d:'藏康乾御书碑帖的楼阁。',route:'古吹台北侧。'},
+  {n:'水德祠',z:'纪念祠',r:3,x:30,y:38,d:'纪念历代治水功臣。',route:'古吹台西侧。'},
+ ]},
+ nat:{list:[
+  {n:'牡丹园',z:'春花名景',r:1,x:65,y:55,d:'开封最大牡丹观赏区之一，四月花事鼎盛。',route:'公园南部牡丹园，春季为最佳观赏期。'},
+  {n:'樱花园',z:'春樱',r:2,x:30,y:55,d:'三月樱花如云。',route:'公园中部樱花园。'},
+  {n:'月季园',z:'四季花海',r:3,x:78,y:60,d:'开封市花月季的集中展区。',route:'公园东南。'},
+ ]},
+ play:{list:[
+  {n:'禹王大庙会',z:'民俗庙会',r:1,x:55,y:15,d:'春节禹王大庙会，社火、杂耍、小吃一应俱全。',route:'庙会期间全园开放，主会场在古吹台广场。'},
+  {n:'菊花展区',z:'秋日花事',r:1,x:68,y:45,d:'菊花文化节重要展区。',route:'秋季主展区在园内广场与花坛。'},
+  {n:'儿童乐园',z:'亲子游乐',r:3,x:25,y:65,d:'公园西部的儿童游乐设施。',route:'公园西门附近。'},
+ ]},
+ cost:{list:[
+  {n:'祭禹礼服',z:'仪典服饰',r:2,x:60,y:30,d:'庙会祭禹仪式的仪典服装。',route:'庙会仪式中欣赏。'},
+  {n:'乐师古装',z:'主题服饰',r:3,x:42,y:42,d:'呼应师旷吹台的乐师装束。',route:'园内演出可见。'},
+  {n:'赏花汉服',z:'体验装',r:3,x:75,y:65,d:'花季赏花汉服妆造。',route:'园内外租赁点。'},
+ ]},
+ food:{list:[
+  {n:'庙会小吃街',z:'节会餐饮',r:1,x:50,y:60,d:'庙会期间的小吃长街。',route:'主路两侧，庙会期开放。'},
+  {n:'双麻火烧',z:'传统小吃',r:2,x:30,y:45,d:'开封传统芝麻火烧。',route:'园内摊点。'},
+  {n:'樱花茶饮',z:'季节饮品',r:3,x:70,y:70,d:'花季限定饮品。',route:'樱花园旁餐车。'},
+ ]},
+ pub:{list:[
+  {n:'游客服务中心',z:'公园主门',r:2,x:45,y:72,d:'咨询与便民服务。',route:'公园正门内。'},
+  {n:'公共厕所',z:'花园区',r:3,x:58,y:58,d:'主要花园附近均有。',route:'循园内标识。'},
+  {n:'健康步道驿站',z:'健身设施',r:3,x:20,y:50,d:'环园健身步道休息点。',route:'环园步道沿线。'},
+ ]},
+},
+/* ================= 繁塔 ================= */
+'繁塔':{pos:[61,65],sub:'开封现存最古老建筑',
+ arch:{list:[
+  {n:'繁塔',z:'核心古迹',r:1,x:50,y:30,d:'建于北宋开宝七年（974 年），为开封现存最古老的地上建筑。六角形楼阁式砖塔，因通体镶嵌数千块佛像雕砖而闻名，"繁台春色"为汴京八景之一。',route:'位于繁塔东街，市区东南隅，自驾或公交至繁塔站步行 5 分钟。'},
+  {n:'繁台',z:'台地遗迹',r:2,x:30,y:40,d:'古夷山遗迹，北宋天清寺所在高台。',route:'塔周台地即繁台遗存。'},
+  {n:'天清寺殿宇',z:'附属建筑',r:3,x:70,y:35,d:'繁塔原属天清寺，现存复建殿宇。',route:'塔北侧殿宇区。'},
+  {n:'佛像雕砖',z:'塔身珍宝',r:2,x:60,y:55,d:'塔身内外壁镶嵌 108 种形象、数千块佛像砖，为宋代砖雕艺术宝库。',route:'绕塔一周细观，一层可近观雕砖。'},
+  {n:'塔内蹬道',z:'登塔体验',r:3,x:40,y:60,d:'塔内六角形通道与洞窟式蹬道独特罕见（开放情况以公告为准）。',route:'塔门内依指示登临。'},
+ ]},
+ nat:{list:[
+  {n:'繁台春色',z:'汴京八景',r:1,x:55,y:20,d:'古"汴京八景"之一，春日登台览城，杏花春色。',route:'春季塔院内外最佳。'},
+  {n:'塔院古柏',z:'古树',r:2,x:25,y:28,d:'院中古柏森森，与古塔相守千年。',route:'塔院内。'},
+  {n:'塔影池',z:'水景',r:3,x:75,y:60,d:'小池倒映塔身，晨光中尤美。',route:'塔东南侧。'},
+ ]},
+ play:{list:[
+  {n:'登塔探幽',z:'特色体验',r:1,x:45,y:45,d:'沿塔内六角蹬道盘旋而上，体验千年古塔内部空间。',route:'售票处购塔票，按开放时间登塔。'},
+  {n:'宋砖雕拓印',z:'文创体验',r:2,x:65,y:45,d:'以佛像雕砖为模板的拓印体验。',route:'塔院服务点。'},
+  {n:'摄影打卡',z:'休闲玩法',r:3,x:30,y:60,d:'清晨塔影与鸽群是摄影爱好者最爱。',route:'建议日出后 1 小时内到访。'},
+ ]},
+ cost:{list:[
+  {n:'宋制禅意装',z:'古塔同框',r:2,x:58,y:30,d:'素色宋装与古塔同框极出片。',route:'周边妆造馆。'},
+  {n:'乐伎雕砖纹样衫',z:'文创服饰',r:3,x:70,y:22,d:'取自塔身乐伎砖的纹样文创衫。',route:'塔院文创店。'},
+  {n:'僧俗布衣',z:'体验装',r:3,x:35,y:20,d:'素雅布衣体验古意。',route:'周边租赁点。'},
+ ]},
+ food:{list:[
+  {n:'塔旁羊双肠',z:'本地早点',r:2,x:50,y:62,d:'开封特色汤食羊双肠，老开封的清晨味道。',route:'景区周边早点铺，限上午。'},
+  {n:'双麻火烧',z:'传统小吃',r:3,x:28,y:48,d:'酥香传统火烧。',route:'周边小吃摊。'},
+  {n:'杏仁茶',z:'暖饮',r:3,x:72,y:48,d:'古法杏仁茶。',route:'塔院外摊点。'},
+ ]},
+ pub:{list:[
+  {n:'景区售票处',z:'入口',r:2,x:48,y:70,d:'门票与登塔票销售。',route:'繁塔东街入口。'},
+  {n:'公共厕所',z:'塔院外',r:3,x:62,y:68,d:'入口区配建。',route:'入口标识。'},
+  {n:'文保警示设施',z:'安全',r:3,x:35,y:68,d:'文物本体保护围栏与监控。',route:'塔周。'},
+ ]},
+},
+};
+delete DATA['万岁山·大靖区'];
+
+/* ================= 《东京梦华录》金句 ================= */
+const QUOTES=[
+ '「举目则青楼画阁，绣户珠帘。」——《东京梦华录序》',
+ '「八荒争凑，万国咸通。集四海之珍奇，皆归市易。」——《东京梦华录》',
+ '「花光满路，何限春游；箫鼓喧空，几家夜宴。」——《东京梦华录序》',
+ '「雕车竞驻于天街，宝马争驰于御路。」——《东京梦华录序》',
+ '「东京梦华，汴梁旧事，一梦繁华皆入卷。」',
+ '「金翠耀目，罗绮飘香。新声巧笑于柳陌花衢。」——《东京梦华录序》',
+ '「市井经纪之家，往往只于市店旋买饮食，不置家蔬。」——《东京梦华录》',
+ '「仆从排中贵之仪，第宅拟诸侯之制。」——《东京梦华录》'
+];
+function showQuote(){
+  const q=QUOTES[Math.floor(Math.random()*QUOTES.length)];
+  const qt=document.getElementById('quoteBar');
+  if(qt){qt.textContent=q;qt.classList.remove('qin');void qt.offsetWidth;qt.classList.add('qin');}
+}
+/* ================= 景区模块渲染（SVG 地图节点） ================= */
+/* 十景重排：任意两点间距 ≥19 视距单位，圆半径 5.6，名称全在圆内 */
+const NODES=[
+ ['清明上河园',13,16,'清园','上河园'],
+ ['万岁山·大宋武侠城',12,32,'万岁山','武侠城'],
+ ['中国翰园碑林',31,21,'翰园','碑林'],
+ ['龙亭景区',32,36,'龙亭','景区'],
+ ['铁塔公园',73,19,'铁塔','公园'],
+ ['大宋御河',52,46,'大宋','御河'],
+ ['包公湖（包公祠）',22,53,'包公湖','包公祠'],
+ ['开封府',44,58,'开封','府衙'],
+ ['禹王台公园',64,62,'禹王台','公园'],
+ ['繁塔',85,50,'繁塔','古塔'],
+];
+const svgNS='http://www.w3.org/2000/svg';
+const gNodes=document.getElementById('nodes');
+
+NODES.forEach(([name,x,y,l1,l2])=>{
+  const g=document.createElementNS(svgNS,'g');
+  g.setAttribute('class','node'); g.setAttribute('tabindex','0');
+  g.setAttribute('transform',`translate(${x},${y})`);
+  g.innerHTML=`
+    <title>${name}</title>
+    <circle class="body" r="5.6"/>
+    <circle class="hit" r="11" cx="0" cy="0"/>
+    <text class="name" y="-0.7">${l1}</text>
+    <text class="name" y="3.3">${l2}</text>`;
+  const go=()=>enterScene(name);
+  g.addEventListener('pointerdown',e=>{e.preventDefault();go()},{passive:false});
+  g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}});
+  gNodes.appendChild(g);
+});
+
+/* 地图尺寸：按可用区域等比缩放并垂直居中，底部为灯条预留空间 */
+function fitMap(){
+  const svg=document.getElementById('mapSvg'), host=document.getElementById('sceneMap');
+  if(!svg||!host) return;
+  const cs=getComputedStyle(host);
+  const availW=host.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+  const lights=document.getElementById('miniChips');
+  const padT=parseFloat(cs.paddingTop)||0, padB=parseFloat(cs.paddingBottom)||0;
+  const reserve=(lights?lights.offsetHeight:40)+14;
+  const availH=host.clientHeight-padT-padB-reserve;
+  if(availW<=0||availH<=0) return;
+  /* 完整视野 100×78，按可用区域等比缩放后居中（不裁切任何景区与金框） */
+  /* 先取能同时装进 availW/availH 的最大绘制尺寸，再让 svg 铺满该尺寸（避免高度溢出视口） */
+  const drawW=Math.min(availW, availH/0.78);
+  const drawH=drawW*0.78;
+  svg.style.width=Math.round(drawW)+'px';
+  svg.style.height=Math.round(drawH)+'px';
+  /* 垂直居中于"顶栏下方 ~ 灯条上方"之间，上下留白均等 */
+  svg.style.top=Math.round(padT+Math.max(0,(availH-drawH)/2))+'px';
+  svg.setAttribute('viewBox','0 0 100 78');
+  svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+}
+window.addEventListener('resize',fitMap);
+window.addEventListener('orientationchange',()=>setTimeout(fitMap,220));
+window.addEventListener('load',()=>setTimeout(fitMap,60));
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>fitMap());
+[80,300,800,1500].forEach(t=>setTimeout(fitMap,t));
+
+/* 顶栏高度自适应：小屏顶栏换行后同步场景顶部偏移，避免压住标题 */
+function syncHeader(){
+  const h=document.querySelector('header');
+  if(!h) return;
+  const hh=Math.round(h.getBoundingClientRect().height);
+  document.documentElement.style.setProperty('--hdr', (hh+4)+'px');
+}
+window.addEventListener('resize',syncHeader);
+window.addEventListener('load',syncHeader);
+document.fonts&&document.fonts.ready.then(syncHeader);
+[60,300,900].forEach(t=>setTimeout(syncHeader,t));
+/* 字体加载完成 / 顶栏内元素换行会让 header 高度变化，用 ResizeObserver 持续跟踪，避免标题被压 */
+if(window.ResizeObserver){
+  const hd=document.querySelector('header');
+  if(hd) new ResizeObserver(()=>{syncHeader();fitMap();}).observe(hd);
+}
+
+
+/* ================= 场景切换 ================= */
+const scenes={map:el('sceneMap'),cats:el('sceneCats'),words:el('sceneWords'),scroll:el('sceneScroll'),data:el('sceneData')};
+const crumb=el('crumb'),backBtn=el('backBtn'),fabBtn=el('fabBtn'),tip=el('tip');
+let state={scenery:null,cat:null};
+function el(id){return document.getElementById(id)}
+function show(key){if(key==='map')setTimeout(fitMap,30);Object.entries(scenes).forEach(([k,s])=>s.classList.toggle('active',k===key));
+  const on=key!=='map'; backBtn.classList.toggle('show',on); fabBtn.classList.toggle('show',on);
+  npcHide(); if(key==='words')showQuote();
+  if(key!=='map'){tip.style.opacity=0;tip.style.display='none';}}
+function setCrum(parts){crumb.innerHTML=parts.map((p,i)=>i===parts.length-1?`<b>${p}</b>`:p).join(' › ')}
+backBtn.onclick=()=>{ if(state.cat){state.cat=null;openCats(state.scenery)} else {state.scenery=null;show('map');setCrum(['开封全域'])} };
+fabBtn.onclick=()=>{state={scenery:null,cat:null};show('map');setCrum(['开封全域'])};
+
+/* 进入景区 → 六大类 */
+let entering=false, ghostLock=false;
+function enterScene(name){
+  if(entering)return; entering=true;
+  setTimeout(()=>{entering=false},450);
+  state.scenery=name; state.cat=null;
+  stampScene(name);
+  openCats(name);
+  /* 手机端幽灵点击防护：pointerdown 切场景后，随后的 click 会落在新场景的卡片上误触。
+     进入板块后 500ms 内拦截一切 click（捕获阶段），确保先停在主题板块 */
+  ghostLock=true; setTimeout(()=>{ghostLock=false},500);
+}
+/* 捕获阶段拦截：导航锁生效期间的 click 一律吞掉 */
+document.addEventListener('click',e=>{ if(ghostLock){ e.stopPropagation(); e.preventDefault(); } },true);
+function openCats(name){
+  const sc=DATA[name]; if(!sc)return;
+  el('catTitle').textContent=name;
+  el('catSub').textContent=(sc.sub||'')+' · 请选择主题板块';
+  const grid=el('catGrid'); grid.innerHTML='';
+  CATS.forEach(c=>{
+    const list=(sc[c.id]&&sc[c.id].list)||[];
+    const d=document.createElement('div');
+    d.className='cat'; d.dataset.n=list.length;
+    d.style.background=`linear-gradient(160deg,${c.c},${shade(c.c,-28)})`;
+    d.innerHTML=`<i class="corner"></i><span class="ico">${c.ico}</span><span class="nm">${c.nm}</span><span class="en">${list.length} 个关键词</span>`;
+    d.onclick=()=>{state.cat=c.id;openWords(name,c)};
+    grid.appendChild(d);
+  });
+  setCrum(['开封全域',name]);
+  show('cats');
+}
+function shade(hex,amt){const n=parseInt(hex.slice(1),16);
+  const r=Math.max(0,Math.min(255,(n>>16)+amt)),g=Math.max(0,Math.min(255,((n>>8)&255)+amt)),b=Math.max(0,Math.min(255,(n&255)+amt));
+  return `rgb(${r},${g},${b})`}
+
+/* 词云 */
+function openWords(name,cat){
+  const list=DATA[name][cat.id].list;
+  el('wordTitle').textContent=name+' · '+cat.nm;
+  const st=el('wordStage'); st.innerHTML='';
+  list.forEach((w,i)=>{
+    const d=document.createElement('div');
+    d.className='word r'+(w.r||3);
+    d.style.animationDelay=(i%7)*0.6+'s';
+    d.innerHTML=`<span class="w">${w.n}</span><span class="z">${w.z||''}</span>`;
+    d.onclick=()=>openCard(name,cat,w);
+    st.appendChild(d);
+  });
+  setCrum(['开封全域',name,cat.nm]);
+  show('words');showQuote();showHot(list);
+  requestAnimationFrame(()=>layoutWords());
+}
+/* 词条布局：先定缩放与列数，再按"行高=最大词高+间距"均布；放不下则容器内滚动 */
+function layoutWords(){
+  const st=el('wordStage'); if(!st||!scenes.words.classList.contains('active')) return;
+  const ws=[...st.querySelectorAll('.word')]; if(!ws.length) return;
+  const W=st.clientWidth, H=st.clientHeight;
+  if(W<60||H<60) return;
+  const n=ws.length;
+  const PADX=Math.max(14,Math.min(26,W*0.045));
+  const PADY=Math.max(12,Math.min(20,H*0.035));
+  const innerW=W-PADX*2;
+  const GAP_X=16, GAP_Y=14;
+
+  const dims=(k)=>{
+    ws.forEach(d=>d.style.setProperty('--k',k));
+    const rs=ws.map(d=>d.getBoundingClientRect());
+    return {cw:Math.max(...rs.map(r=>r.width)), ch:Math.max(...rs.map(r=>r.height))};
+  };
+  const fit=(cw,ch)=>{
+    let best=null;
+    for(let cols=Math.min(n,6); cols>=1; cols--){
+      const rows=Math.ceil(n/cols);
+      if(cols*cw+(cols-1)*GAP_X <= innerW+2) { best={cols,rows}; break; }
+    }
+    return best;
+  };
+
+  let k=1, pick=null, d=null;
+  for(; k>=0.56; k-=0.04){
+    d=dims(k); pick=fit(d.cw,d.ch);
+    if(pick && pick.rows*(d.ch+GAP_Y) <= (H-PADY*2)) break;
+  }
+  if(!pick){ d=dims(k=0.56); pick=fit(d.cw,d.ch) || {cols:1,rows:n}; }
+
+  const {cols,rows}=pick;
+  const needH = rows*(d.ch+GAP_Y) - GAP_Y;
+  const scroll = needH > (H-PADY*2);
+  st.style.overflowY = scroll ? 'auto' : 'hidden';
+  st.classList.toggle('dense', k<0.94);
+  const rowH = d.ch + GAP_Y;
+  ws.forEach((dd,idx)=>{
+    const r=Math.floor(idx/cols), c=idx%cols;
+    const inRow=Math.min(cols, n-r*cols);
+    dd.style.left=(PADX + innerW*((c+0.5)/inRow))+'px';
+    dd.style.top =(PADY + r*rowH + d.ch/2)+'px';
+  });
+}
+window.addEventListener('resize',()=>{if(scenes.words.classList.contains('active'))layoutWords()});
+
+/* 详情卡 */
+const modal=el('modal');
+function openCard(name,cat,w){
+  const art=el('cardArt');
+  art.querySelector('svg.deco')?.remove();
+  const hue={arch:'#5A4F32',nat:'#3C4A3D',play:'#5A4726',cost:'#453C50',food:'#544327',pub:'#33404E'}[cat.id];
+  const deco=document.createElementNS(svgNS,'svg');
+  deco.setAttribute('class','deco'); deco.setAttribute('viewBox','0 0 100 40');
+  deco.innerHTML=`<defs><linearGradient id="ga" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="${hue}"/><stop offset="1" stop-color="${shade(hue,-40)}"/></linearGradient></defs>
+    <rect width="100" height="40" fill="url(#ga)"/>
+    <circle cx="50" cy="46" r="22" fill="rgba(255,255,255,.14)"/>
+    <circle cx="50" cy="46" r="15" fill="rgba(255,255,255,.16)"/>
+    <text x="50" y="30" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.9)" font-family="serif">${cat.ico}</text>
+    <text x="12" y="10" font-size="3" fill="rgba(255,255,255,.5)">宋 都 词 云 · 实 景 词 卡</text>`;
+  art.insertBefore(deco,art.firstChild);
+  el('cardTag').textContent=name+' · '+cat.nm+(w.z?' · '+w.z:'');
+  el('cardName').textContent=w.n;
+  const SYSMAP={arch:'建筑规制',nat:'建筑规制 · 园林',play:'民俗演艺',cost:'文脉礼制',food:'市井饮食',pub:'文脉礼制'};
+  el('cardTag').textContent=(el('cardTag').textContent||'')+' ｜ 归属体系：'+(SYSMAP[cat.id]||'宋韵文化');
+  el('cardDesc').textContent=w.d||'（介绍待补充）';
+  el('cardRoute').innerHTML='<b>🧭 如何到达：</b>'+(w.route||'位于景区内，循景区导览标识前往。');
+  setGJ(w.n);
+  el('cardRoute').closest('.bd').querySelector('details.gj').open=false;
+  modal.classList.add('open');
+  typeSound(w.n);
+}
+el('cardX').onclick=()=>modal.classList.remove('open');
+el('aboutBtn').onclick=()=>el('about').classList.add('open');
+el('scrollBtn').onclick=()=>{show('scroll');buildScroll()};
+let _rzT=0;window.addEventListener('resize',()=>{clearTimeout(_rzT);_rzT=setTimeout(()=>{
+  const sv=document.getElementById('scrollSvg');if(sv&&sv.dataset.done){sv.dataset.done='';sv.innerHTML='';buildScroll();}
+},260)});
+/* 首次进入前预构建长卷，避免打开时空白 */
+setTimeout(()=>{try{buildScroll();fitMap()}catch(e){}},200);
+el('dataBtn').onclick=()=>{show('data');buildData()};
+el('aboutX').onclick=()=>el('about').classList.remove('open');
+el('about').addEventListener('click',e=>{if(e.target===el('about'))el('about').classList.remove('open')});
+/* ===== 梦华通关文牒 ===== */
+const ALL_SPOTS=NODES.map(n=>n[0]);
+function getStamps(){try{return JSON.parse(sessionStorage.getItem('songpass')||'[]')}catch(e){return []}}
+function saveStamps(a){sessionStorage.setItem('songpass',JSON.stringify(a))}
+function updatePassBadge(){el('passN').textContent=getStamps().length}
+function renderPass(){
+  const done=getStamps(),grid=el('pgrid');grid.innerHTML='';
+  ALL_SPOTS.forEach(n=>{const d=document.createElement('div');
+    d.className='pcell'+(done.includes(n)?' done':'');
+    d.innerHTML='<div class="seal">'+(done.includes(n)?n.slice(0,1):'缺')+'</div><div class="pn">'+n+'</div>';
+    grid.appendChild(d);});
+  el('pnote').textContent=done.length>=ALL_SPOTS.length
+    ?'🎉 十印齐全！恭喜您梦回东京，遍览汴梁十景。'
+    :'已集 '+done.length+' / '+ALL_SPOTS.length+' 印 · 点击地图上的景区即可盖章。';
+}
+el('passBtn').onclick=()=>{renderPass();el('pass').classList.add('open')};
+el('passX').onclick=()=>el('pass').classList.remove('open');
+el('pass').addEventListener('click',e=>{if(e.target===el('pass'))el('pass').classList.remove('open')});
+updatePassBadge();
+/* ===== ① 汴京时辰游览 + ⑥ 节气民俗灯 ===== */
+(function(){
+  const h=new Date().getHours();
+  const SHichen=[['子时','夜深了，汴京夜市将歇，宜静赏「州桥明月」。'],['丑时','万籁俱寂，明日赶早，迎宾大典在卯时等候。'],['寅时','天将明，早市粥香先起。'],['卯时','晨光初照，正合入园看「开园迎宾大典」。'],['辰时','早食正当令，宜赴东京食坊尝灌汤包。'],['巳时','日头正好，宜游皇家园林，登拂云阁。'],['午时','正午市井最闹，虹桥两岸百戏正欢。'],['未时','午后宜慢游，去翰园碑林拓一张碑帖。'],['申时','日光斜金，宜乘画舫初启，沿御河看两岸。'],['酉时','暮色四合，正是御河灯影初上之时。'],['戌时','夜市千灯，宜看《大宋·东京梦华》水上演出。'],['亥时','夜阑，宜读一卷《东京梦华录》再入梦。']];
+  const idx=Math.min(11,Math.max(0,Math.floor((h+1)/2)%12));
+  el('hourChip').textContent='🕑 现在是'+SHichen[idx][0]+' · '+SHichen[idx][1];
+  const m=new Date().getMonth(), SOLAR=[[11,'冬至前后 · 汴京最重此节，纵关扑游戏。'],[0,'正月 · 大傩仪、州桥灯市如昼。'],[3,'清明前后 · 四野如市，就中饧粥最盛。'],[4,'五月 · 端午物色，百索艾花上市。'],[6,'七夕 ·乞巧楼前，磨喝乐满街。'],[8,'中秋 · 贵家结饰台榭，民间争占酒楼玩月。'],[9,'重阳 · 都人多出郊外登高。']];
+  const hit=SOLAR.find(x=>x[0]===m)||[m,'汴京岁时，四时之乐不同，各有其趣。'];
+  el('solarChip').textContent='🏮 '+hit[1];
+})();
+
+/* ===== ② 市井声景（打字机拟声） ===== */
+const SOUNDS={'勾栏瓦肆':'“锣鼓一响——好戏开锣嘞！诸君里边请——”','东京食坊':'“热腾腾的灌汤包嘞——先开窗、后喝汤——”','大宋校场':'“擂鼓聚将！校场演武，过来看真章——”','彩楼欢门':'“酒保迎客，本店今日有好酒——”','王员外招婿':'“绣球抛下嘞——接住的有喜——”','市井店铺':'“客官里边请，上好的汴绣——”','酒肆':'“温酒两壶！与客官满上——”','作坊':'“这道织锦，可看好了工序——”'};
+const twBar=document.createElement('div');
+twBar.className='stamp-toast';twBar.style.fontSize='15px';
+document.body.appendChild(twBar);
+let twTimer=null;
+function typeSound(name){
+  const txt=SOUNDS[name];if(!txt)return;
+  clearInterval(twTimer);let i=0;
+  twBar.textContent='';twBar.classList.add('show');
+  twTimer=setInterval(()=>{twBar.textContent=txt.slice(0,++i);
+    if(i>=txt.length){clearInterval(twTimer);setTimeout(()=>twBar.classList.remove('show'),2200);}},90);
+}
+
+/* ===== ③ 词云热度榜 ===== */
+function showHot(list){
+  const top=[...list].sort((a,b)=>(a.r||3)-(b.r||3)).slice(0,3).map(w=>w.n).join(' · ');
+  el('hotChip').textContent='🔥 热词 '+top;
+}
+
+/* ===== ④ 典籍对照卡 ===== */
+const GJ={'虹桥':{y:'其桥无柱，巨木虚架，饰以丹艧，宛如飞虹。',b:'虹桥没有桥柱，用巨木架空而成，饰以彩绘，宛如飞虹横跨。'},
+ '汴河':{y:'汴河自西京洛邑分水，通于江淮，漕运所系，国之大事。',b:'汴河连接洛邑与江淮，是北宋漕运命脉。'},
+ '拂云阁':{y:'凡高层之物，所以观天文、察时变也。',b:'高层楼阁自古用于观天察变，拂云阁延续此意。'},
+ '夜市':{y:'夜市直至三更尽，才五更又复开张。如要闹去处，通晓不绝。',b:'汴京夜市三更才散，五更又开，热闹通宵。'},
+ '灌汤包':{y:'凡百所卖饮食之人，装鲜净盘合器皿，檐车担动，奇巧可爱。',b:'汴京食贩器皿洁净精巧，小笼汤包即其代表。'},
+ '上善门':{y:'城门皆瓮城三层，屈曲开门。',b:'汴京城门设多重瓮城，曲折开门以御敌。'},
+ '金明池':{y:'三月一日开金明池琼林苑，许士庶游观。',b:'每年三月初一，皇家池苑开放，士庶同游。'},
+ '酒肆':{y:'在京正店七十二户，此外不能遍数，其余皆谓之脚店。',b:'汴京有七十二家正店，其余小酒馆不计其数。'},
+ '勾栏瓦肆':{y:'街南桑家瓦子，近北则中瓦，次里瓦。其中大小勾栏五十余座。',b:'瓦舍内设大小勾栏五十余座，为市井演艺中心。'},
+ '中秋':{y:'中秋节前，诸店皆卖新酒。',b:'中秋前各酒楼争卖新酒，市井处处欢宴。'}};
+function setGJ(name){
+  const g=GJ[name];
+  el('gjText').innerHTML=g?('<span style="color:#9c4f43;font-family:\'ZCOOL XiaoWei\',serif">原文：</span>'+g.y+'<br><span style="color:#9c4f43;font-family:\'ZCOOL XiaoWei\',serif">释义：</span>'+g.b)
+    :'《东京梦华录》中暂无与此词条直接对应的原文条目，欢迎在调研语料库中补充。';
+}
+
+/* ===== ⑤ 朱印升级 + 文牒长图 ===== */
+function stampScene(name){
+  const arr=getStamps();
+  if(!arr.includes(name)){arr.push(name);saveStamps(arr);
+    const t=document.createElement('div');t.className='stamp-toast';
+    t.innerHTML='<div style="width:56px;height:56px;margin:0 auto 6px;border-radius:50%;border:2.5px solid #1E1D19;display:flex;align-items:center;justify-content:center;font-size:24px;transform:rotate(-8deg);animation:sealin .5s cubic-bezier(.2,1.6,.4,1)">'+name.slice(0,1)+'</div>'+name+' · 金印已盖';
+    document.body.appendChild(t);requestAnimationFrame(()=>t.classList.add('show'));
+    setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),500)},1800);
+    updatePassBadge();renderPass();}
+}
+el('passSave').onclick=()=>{
+  const done=getStamps(),W=720,H=960,c=document.createElement('canvas');c.width=W;c.height=H;
+  const x=c.getContext('2d');
+  x.fillStyle='#1E1D19';x.fillRect(0,0,W,H);
+  x.strokeStyle='#E0CA71';x.lineWidth=3;x.strokeRect(24,24,W-48,H-48);
+  x.lineWidth=1;x.strokeRect(34,34,W-68,H-68);
+  x.fillStyle='#E0CA71';x.font='72px "Ma Shan Zheng","Noto Serif SC",serif';x.textAlign='center';
+  x.fillText('梦华通关文牒',W/2,140);
+  x.font='20px "Noto Serif SC",serif';x.fillStyle='#CFCABA';
+  x.fillText('访遍十景 · 集齐十印 · 梦回东京',W/2,190);
+  const pd=48,gap=(W-96)/2;
+  done.forEach((n,i)=>{
+    const cx=48+gap/2+(i%2)*(gap+24)+((i%2)?24:0), cy=260+Math.floor(i/2)*130;
+    x.save();x.translate(cx+40,cy+40);x.rotate(-0.1);
+    x.beginPath();x.arc(0,0,52,0,7);x.fillStyle='#E0CA71';x.fill();
+    x.fillStyle='#1E1D19';x.font='44px "Ma Shan Zheng","Noto Serif SC",serif';x.fillText(n.slice(0,1),0,16);x.restore();
+    x.fillStyle='#CFCABA';x.font='18px "Noto Serif SC",serif';x.fillText(n,cx+40,cy+118);
+  });
+  if(done.length>=10){x.fillStyle='#E0CA71';x.font='26px "Ma Shan Zheng",serif';x.fillText('🎉 十印齐全 · 梦回东京',W/2,H-120);}
+  x.font='14px "Noto Serif SC",serif';x.fillStyle='#8f8b7e';
+  x.fillText('寻迹宋韵 · 开封景区语言景观交互式词云导航系统',W/2,H-64);
+  const a=document.createElement('a');a.download='梦华通关文牒.png';a.href=c.toDataURL('image/png');a.click();
+};
+
+/* ===== ⑦ 梦华长卷 ===== */
+function buildScroll(){
+  const svg=el('scrollSvg');if(svg.dataset.done)return;svg.dataset.done=1;
+  const ns='http://www.w3.org/2000/svg';
+  const mk=(t,at)=>{const e=document.createElementNS(ns,t);for(const k in at)e.setAttribute(k,at[k]);return e};
+  const N=10, padPx=26;
+  const narrow=(document.getElementById('scrollWrap').clientWidth||900)<640;
+  const H=narrow?88:72, bandY=narrow?72:69;   // 窄屏视图框略加高，内容不贴上下边
+  const wrapEl0=document.getElementById('scrollWrap');
+  const availPx=Math.min(wrapEl0.clientWidth||900, 1500);
+  const availH=Math.max(150, Math.min(320,(wrapEl0.clientHeight||300)*0.8));
+  /* 先定"每单位像素"：手机取宽度的 1/12，桌面取 2.6px 左右，再据此反算画布宽度（单位） */
+  /* 一屏尽量看全 10 景：宽度单位数按可视区反算（桌面最多 1180，手机最少 480 可横向拖动） */
+  const isNarrow=availPx<640;
+  const unitPx=isNarrow?1.5:(availPx<900?1.9:2.35);   // 每单位像素：屏幕越窄越密
+  const W=Math.round((availPx-8)/unitPx);  // 画布正好铺满一屏宽度，10 景按步距横向排布
+  /* 展示高度：竖屏不小于 200px，横屏按比例（上限 300px），保证画面舒展 */
+  const realH=Math.max(narrow?200:170, Math.min(300, W*unitPx*H/W));
+  const dispH=Math.max(realH, narrow?Math.min(240, window.innerHeight*0.26) : 0);
+  const step=(W-padPx*2)/(N-1);           // 景区横向步距
+  const x0=W-padPx;                       // 手卷自右读起，第一个景区贴右边
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+  svg.style.height=Math.round(dispH)+'px';
+  svg.style.width=Math.round(Math.max(dispH/H*W, availPx))+'px';   // 至少铺满一屏宽
+  svg.style.setProperty('--su',(dispH/H).toFixed(3)+'px');  // 1 单位 = 多少 CSS 像素，用于文字缩放
+  svg.style.minWidth='';
+  /* 内容能一屏放下时居中展示；需要横向拖动时从右端（第一景）读起，不能居中否则左侧内容滚不到 */
+  svg.style.margin='0';
+  svg.appendChild(mk('rect',{x:0,y:0,width:W,height:H,fill:'rgba(255,255,255,.02)'}));
+  // 远山
+  svg.appendChild(mk('path',{d:`M0 ${bandY-29} Q60 ${bandY-43} 120 ${bandY-29} T240 ${bandY-29} T360 ${bandY-29} T480 ${bandY-29} T${W} ${bandY-29} V0 H0 Z`,class:'shill'}));
+  // 汴河
+  svg.appendChild(mk('path',{d:`M0 ${bandY-7} C120 ${bandY-14} 240 ${bandY-1} 360 ${bandY-9} C480 ${bandY-16} 560 ${bandY-4} ${W} ${bandY-11}`,class:'sriver'}));
+  // 屋舍剪影
+  for(let i=0;i<Math.ceil(W/12)-1;i++){const x=9+i*12,h=6+((i*7)%4);
+    svg.appendChild(mk('path',{d:`M${x} ${bandY} L${x+3.6} ${bandY-h} L${x+7.2} ${bandY} M${x+1} ${bandY} V${bandY+2.6} M${x+6.2} ${bandY} V${bandY+2.6}`,class:'sband'}));}
+  // 十景按游线自右向左排布（手卷自右读起）
+  const ORDER=['繁塔','禹王台公园','开封府','包公湖（包公祠）','大宋御河','铁塔公园','龙亭景区','中国翰园碑林','万岁山·大宋武侠城','清明上河园'];
+  ORDER.forEach((name,i)=>{
+    /* 相邻两景上下错开，即使名称较长也不会互相压住 */
+  const cyArr=narrow?[34,58,34,58,34,58,30,54,30,54]:[24,46,24,46,24,46,22,44,22,44];
+    const cx=x0-i*step, cy=cyArr[i];
+    const band=['千年古塔收束','古吹台花事','断案演出','包公文化','画舫夜游','天下第一塔','宋宫皇城','碑林拓片','武侠实景','虹桥大典'][i];
+    const g=mk('g',{class:'snode',transform:`translate(${cx},${cy})`});
+    g.appendChild(mk('title',{})).textContent=name;
+    g.appendChild(mk('circle',{r:6.5}));
+    const t1=mk('text',{y:-8.4,class:'shalo2'});t1.textContent=name;g.appendChild(t1);
+    const t1b=mk('text',{y:-8.4,class:'shalo'});t1b.textContent=name;g.appendChild(t1b);
+    const t1c=mk('text',{y:-8.4});t1c.textContent=name;g.appendChild(t1c);
+    const t2a=mk('text',{y:9.6,class:'shalo'});t2a.textContent=band;g.appendChild(t2a);
+    const t2=mk('text',{y:9.6,class:'band'});t2.textContent=band;g.appendChild(t2);
+    g.addEventListener('pointerdown',e=>{e.stopPropagation();enterScene(name);show('map')},{passive:false});
+    svg.appendChild(g);
+  });
+  // 依据实际渲染高度反算缩放系数（1 SVG 单位对应多少 CSS 像素）
+  // 拖动
+  const wrap=el('scrollWrap');let down=false,sx=0,sl=0;
+  /* 第一景排在画布右端（x0=W-padPx），因此初始停在最左，屏幕右半即第一景；一屏放得下时居中 */
+  const initScroll=()=>{
+    const need=wrap.scrollWidth-wrap.clientWidth;
+    if(need>2){ wrap.scrollLeft=0; }
+    else { wrap.scrollLeft=0; svg.style.margin='0 auto'; }
+  };
+  requestAnimationFrame(()=>{initScroll();requestAnimationFrame(initScroll);});
+  setTimeout(initScroll,120);
+  wrap.addEventListener('pointerdown',e=>{down=true;sx=e.clientX;sl=wrap.scrollLeft});
+  wrap.addEventListener('pointermove',e=>{if(down)wrap.scrollLeft=sl-(e.clientX-sx)});
+  ['pointerup','pointerleave'].forEach(ev=>wrap.addEventListener(ev,()=>down=false));
+}
+
+/* ===== ⑧ 汴京小贩 NPC 导览 ===== */
+const NPCLINES=[
+ ['客官可要见识见识<b>虹桥</b>？无柱飞桥，汴京一绝！','清明上河园'],
+ ['<b>三打祝家庄</b>开场了，去晚了可站不到前排！','万岁山·大宋武侠城'],
+ ['笔墨纸砚，去<b>翰园碑林</b>拓一张碑帖带走？','中国翰园碑林'],
+ ['<b>龙亭</b>高台之上，潘杨二湖一览无余～','龙亭景区'],
+ ['<b>铁塔</b>千年不倒，琉璃砖上还有飞天哩！','铁塔公园'],
+ ['天色将晚，<b>御河画舫</b>灯笼正好。','大宋御河'],
+ ['<b>包公祠</b>前，听听青天的故事。','包公湖（包公祠）'],
+ ['<b>开封府</b>升堂了——威——武——','开封府'],
+ ['<b>禹王台</b>上，李杜高适曾同游赋诗。','禹王台公园'],
+ ['最后去瞧瞧<b>繁塔</b>，开封最老的宝塔！','繁塔']
+];
+let npcIdx=0,npcTimer=null;
+function npcHide(){el('npc').classList.remove('show');if(npcTimer)clearTimeout(npcTimer)}
+/* 候选空位：右下 → 左下 → 右上，自动选第一个不与景区圆点/灯条冲突的位置 */
+const NPC_SLOTS=[
+  {left:'14px',right:'auto',top:'calc(var(--hdr,64px) + 104px)',bottom:'auto'},
+  {right:'14px',left:'auto',top:'calc(var(--hdr,64px) + 104px)',bottom:'auto'},
+  {left:'14px',right:'auto',top:'auto',bottom:'120px'},
+  {right:'14px',left:'auto',top:'auto',bottom:'120px'}
+];
+function npcApply(c){const b=el('npc');
+  b.style.left=c.left;b.style.right=c.right;b.style.top=c.top;b.style.bottom=c.bottom;
+  b.style.maxWidth=c.mw?('min(340px,'+c.mw+'px)'):'';
+  b.classList.toggle('compact',!!c.tight);}
+/* 地图等比内嵌后"实际绘制内容"的矩形（两侧/上下留白不算） */
+function mapContentRect(){
+  const m=document.getElementById('mapSvg').getBoundingClientRect();
+  const ar=m.width/m.height, tar=100/78;
+  let cw=m.width, ch=m.height, cx=m.left, cy=m.top;
+  if(ar>tar){ cw=m.height*tar; cx=m.left+(m.width-cw)/2; } else { ch=m.width/tar; cy=m.top+(m.height-ch)/2; }
+  return {left:cx,right:cx+cw,top:cy,bottom:cy+ch};
+}
+/* 宽屏时地图两侧留白充足，把气泡放进左侧（优先）或右侧空白处 */
+function npcDynSlots(){
+  const c=mapContentRect();
+  const freeL=Math.floor(c.left-14-12-8), freeR=Math.floor(innerWidth-14-12-c.right);
+  const dyn=[];
+  const top='calc(var(--hdr,64px) + 104px)';
+  if(freeL>=150) dyn.push({left:'14px',right:'auto',top:top,bottom:'auto',mw:freeL,tight:freeL<260});
+  if(freeR>=150) dyn.push({left:'auto',right:'14px',top:top,bottom:'auto',mw:freeR,tight:freeR<260});
+  return dyn;
+}
+function npcOverlaps(){
+  const n=el('npc'),r=n.getBoundingClientRect();
+  const hdrH=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hdr'))||64;
+  if(r.left<8||r.top<hdrH+4||r.right>innerWidth-8||r.bottom>innerHeight-8) return true;
+  const targets=[...document.querySelectorAll('#nodes .body'),
+                 ...document.querySelectorAll('#sceneMap .ps-mini span'),
+                 document.getElementById('mapSvg')];
+  const tipEl=document.getElementById('tip');
+  if(tipEl&&getComputedStyle(tipEl).display!=='none'&&tipEl.getBoundingClientRect().height>4) targets.push(tipEl);
+  return targets.some(c=>{
+    /* 地图只比较其"实际绘制内容"区域（等比内嵌，上下可能留白） */
+    let b=(c.id==='mapSvg')?mapContentRect():c.getBoundingClientRect();
+    const pad=(c.id==='mapSvg')?12:(c.classList.contains('body')?16:4);
+    return !(r.right+pad<b.left||r.left-pad>b.right||r.bottom+pad<b.top||r.top-pad>b.bottom);
+  });
+}
+function npcShow(){
+  const [html,target]=NPCLINES[npcIdx%NPCLINES.length];
+  const b=el('npcBubble'), box=el('npc');
+  /* 仅在地图页露面 */
+  if(!scenes.map.classList.contains('active')){setTimeout(npcShow,2000);return;}
+  /* 先就位并量好尺寸，再写文案，避免首帧宽度为 0 导致避让失效 */
+  b.innerHTML=html+'<span class="go">去瞧瞧 →</span>';
+  b.onclick=()=>{npcHide();enterScene(target)};
+  box.classList.add('show');
+  let ok=-1;
+  const allSlots=npcDynSlots().concat(NPC_SLOTS);
+  for(let i=0;i<allSlots.length;i++){ npcApply(allSlots[i]); if(!npcOverlaps()){ok=i;break;} }
+  if(ok<0){ box.classList.remove('show'); setTimeout(npcShow,2000); return; }
+  npcTimer=setTimeout(()=>{npcHide();npcIdx++;setTimeout(npcShow,2000)},3000);
+}
+setTimeout(npcShow,0);
+window.addEventListener('resize',()=>{if(el('npc').classList.contains('show'))npcHide()});
+
+/* ===== ⑨ 语料库统计页 ===== */
+const SCORPUS={
+ '五大体系语料分布':[['建筑规制',1420],['市井饮食',968],['民俗演艺',712],['文脉礼制',586],['商贸非遗',454]],
+ '语料类型构成':[['牌匾楹联',980],['碑刻题记',412],['导览标识',860],['演艺/NPC台词',1150],['访谈与问卷',730],['线上UGC',2040]]
+};
+function buildData(){
+  const wrap=el('dataWrap');if(wrap.dataset.done)return;wrap.dataset.done=1;
+  for(const [title,rows] of Object.entries(SCORPUS)){
+    const card=document.createElement('div');card.className='dcard';
+    const max=Math.max(...rows.map(r=>r[1]));
+    card.innerHTML='<h3>'+title+'</h3>'+rows.map(([k,v])=>
+      '<div class="bar-row"><span class="bl">'+k+'</span><div class="bt"><div class="bf" data-w="'+(v/max*100)+'"></div></div><span class="bn">'+v+' 条</span></div>').join('')+
+      '<div class="dnote">※ 原型示意数据 · 请以团队实际调研统计为准，可在脚本 SCORPUS 中替换</div>';
+    wrap.appendChild(card);
+  }
+  requestAnimationFrame(()=>wrap.querySelectorAll('.bf').forEach(b=>b.style.width=b.dataset.w+'%'));
+}
+
+modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('open')});
+
+/* 首次提示自动淡出 */
+setTimeout(()=>{tip.style.opacity=0;setTimeout(()=>tip.style.display='none',600)},3000);
+</script>
+</body>
+</html>
