@@ -147,6 +147,9 @@ svg{width:100%;height:100%;display:block;touch-action:pan-y}
 .card .art svg.deco{width:100%;height:100%}
 .card .art .t{position:absolute;bottom:10px;left:0;right:0;text-align:center;color:#F2EFE6;font-family:'Ma Shan Zheng',serif;
   font-size:clamp(20px,5.5vw,28px);text-shadow:0 2px 8px rgba(0,0,0,.55)}
+.card .art .cardIco{position:absolute;left:50%;top:50%;transform:translate(-50%,-54%);z-index:2;pointer-events:none;opacity:.95}
+.card .art .cardIco svg{width:64px;height:64px;display:block}
+@media (max-width:400px){.card .art .cardIco svg{width:54px;height:54px}}
 .card .bd{padding:20px 26px 8px}
 .card .tag{display:inline-block;font-size:11px;color:#1E1D19;background:var(--gold);border-radius:99px;padding:3px 12px;letter-spacing:2px}
 .card p{margin-top:14px;font-size:15.5px;line-height:2.05;text-align:justify;color:#000000}
@@ -1226,9 +1229,12 @@ function openCard(name,cat,w){
     <rect width="100" height="40" fill="url(#ga)"/>
     <circle cx="50" cy="46" r="22" fill="rgba(255,255,255,.14)"/>
     <circle cx="50" cy="46" r="15" fill="rgba(255,255,255,.16)"/>
-    <text x="50" y="30" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.9)" font-family="serif">${cat.ico}</text>
     <text x="12" y="10" font-size="3" fill="rgba(255,255,255,.5)">宋 都 词 云 · 实 景 词 卡</text>`;
   art.insertBefore(deco,art.firstChild);
+  art.querySelector('.cardIco')?.remove();
+  const ic=document.createElement('div');
+  ic.className='cardIco'; ic.innerHTML=cat.ico;
+  art.appendChild(ic);
   el('cardTag').textContent=name+' · '+cat.nm+(w.z?' · '+w.z:'');
   el('cardName').textContent=w.n;
   const SYSMAP={arch:'建筑规制',nat:'建筑规制 · 园林',play:'民俗演艺',cost:'文脉礼制',food:'市井饮食',pub:'文脉礼制'};
