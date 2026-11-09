@@ -1480,20 +1480,61 @@ setTimeout(()=>{tip.style.opacity=0;setTimeout(()=>tip.style.display='none',600)
 /* ---------- ① 语音朗读 ---------- */
 function ttsReady(){ return 'speechSynthesis' in window; }
 function stopSpeak(){ try{ speechSynthesis.cancel(); }catch(e){} }
+/* 清理干扰合成的装饰符号：引号/书名号/间隔号/emoji 等（部分浏览器遇此类字符会静音） */
+function ttsClean(t){
+  return (t||'')
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2B00}-\u{2BFF}]/gu,'')
+    .replace(/[「」『』《》【】〈〉""''·—…～%％]/g,'，')
+    .replace(/\s*，\s*/g,'，').replace(/，+/g,'，').replace(/^，+|，+$/g,'');
+}
+let __ttsToastT=0;
+function ttsToast(msg){
+  clearTimeout(__ttsToastT);
+  document.querySelectorAll('.stamp-toast.tts-msg').forEach(e=>e.remove());
+  const t=document.createElement('div'); t.className='stamp-toast tts-msg'; t.style.fontSize='14px';
+  t.textContent=msg; document.body.appendChild(t);
+  requestAnimationFrame(()=>t.classList.add('show'));
+  __ttsToastT=setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),500); },2800);
+}
+/* iOS/Safari 需要一次同步的 speak 调用来"解锁"语音通道（静音占位，无感知） */
+function ttsUnlock(){
+  if(!ttsReady()) return;
+  try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){}
+}
 function speak(text, btn){
   if(!ttsReady() || !text) return;
+  const clean=ttsClean(text);
+  if(!clean) return;
+  ttsUnlock();
   stopSpeak();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang='zh-CN'; u.rate=.92; u.pitch=1;
-  try{
-    const vs = speechSynthesis.getVoices().filter(v=>/zh|Chinese|中文/i.test(v.lang+v.name));
-    if(vs.length) u.voice = vs.find(v=>/Xiaoxiao|Yunxi|晓晓|云希/i.test(v.name)) || vs[0];
-  }catch(e){}
-  if(btn){ btn.classList.add('speaking'); u.onend=u.onerror=()=>btn.classList.remove('speaking'); }
-  speechSynthesis.speak(u);
+  if(btn) btn.classList.add('speaking');
+  /* Chrome 下 cancel 后同一帧内 speak 可能被吞，延迟 60ms 再正式播放 */
+  setTimeout(()=>{
+    const u=new SpeechSynthesisUtterance(clean);
+    u.lang='zh-CN'; u.rate=.92; u.pitch=1;
+    try{
+      const all=speechSynthesis.getVoices()||[];
+      const vs=all.filter(v=>/^zh/i.test(v.lang)||/Chinese|中文/i.test(v.lang+v.name));
+      if(vs.length) u.voice=vs.find(v=>/Xiaoxiao|Yunxi|晓晓|云希|Tingting|婷婷/i.test(v.name))||vs[0];
+    }catch(e){}
+    let started=false;
+    u.onstart=()=>{ started=true; };
+    u.onend=u.onerror=()=>{ if(btn) btn.classList.remove('speaking'); };
+    u.onerror=(e)=>{ ttsToast('语音播放失败'+(e&&e.error?'：'+e.error:'')); };
+    speechSynthesis.speak(u);
+    setTimeout(()=>{
+      if(!started && !speechSynthesis.speaking){
+        if(btn) btn.classList.remove('speaking');
+        ttsToast('当前浏览器缺少中文语音包或禁用了朗读，请用系统自带 Safari / Chrome 打开');
+      }
+    },1500);
+  },60);
 }
 if(ttsReady()){
-  try{ speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices(); }catch(e){}
+  const warm=()=>{ try{ speechSynthesis.getVoices(); }catch(e){} };
+  warm();
+  try{ speechSynthesis.onvoiceschanged=warm; }catch(e){}
+  document.addEventListener('pointerdown', warm, {once:true});
 }else{
   document.querySelectorAll('.tts-row').forEach(e=>e.style.display='none');
 }
