@@ -315,7 +315,7 @@ details.gj p{padding:2px 16px 14px;font-size:14px;line-height:2.05;color:#000;te
   #sceneWords .scene-title p{display:none}
 }
 
-/* ================= 增强版：梦华签 / 语料库搜索 / 语音朗读 ================= */
+/* ================= 增强版：梦华签 / 语料库搜索 / 梦华先生问答 ================= */
 #qian{position:fixed;inset:0;z-index:95;display:none;align-items:flex-end;justify-content:center;background:rgba(8,8,6,.72);backdrop-filter:blur(4px)}
 #qian.open{display:flex}
 @media (min-width:700px){ #qian{align-items:center} }
@@ -361,10 +361,6 @@ details.gj p{padding:2px 16px 14px;font-size:14px;line-height:2.05;color:#000;te
 .sr-meta{font-size:12px;color:#A8A6A0;margin-top:4px;letter-spacing:1px}
 .sr-desc{font-size:12.5px;color:#B9B6AD;margin-top:6px;line-height:1.8;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .sb-hint{font-size:13px;color:#8B887E;letter-spacing:2px;text-align:center;padding:18px 0;border:1px dashed rgba(224,202,113,.22);border-radius:12px}
-/* —— 语音朗读 —— */
-.tts-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-.tts-btn{padding:7px 13px;font-size:12.5px}
-.tts-btn.speaking{background:rgba(224,202,113,.22);border-color:var(--gold);animation:qglow 1.2s ease infinite alternate}
 
 /* 语料库页：改为纵向流式布局，容纳搜索区 */
 #sceneData{display:block;overflow-y:auto;overflow-x:hidden;padding:0 0 30px}
@@ -372,6 +368,45 @@ details.gj p{padding:2px 16px 14px;font-size:14px;line-height:2.05;color:#000;te
 #sceneData .search-bar{margin:0 auto 14px}
 #sceneData .data-wrap{position:static;inset:auto;overflow:visible;padding:4px 4% 0;gap:18px}
 #sceneData .sb-results{padding-bottom:6px}
+
+/* ================= 梦华先生问答 ================= */
+#master{position:fixed;inset:0;z-index:96;display:none;align-items:flex-end;justify-content:center;background:rgba(8,8,6,.72);backdrop-filter:blur(4px);padding:0 10px 0}
+#master.open{display:flex}
+@media (min-width:700px){ #master{align-items:center} #master .mcard{border-radius:22px} }
+.mcard{position:relative;display:flex;flex-direction:column;width:min(560px,96vw);height:min(640px,86vh);max-height:88vh;
+  background:linear-gradient(180deg,#2A2823,#1B1A16);border:1px solid rgba(224,202,113,.4);border-bottom:none;
+  border-radius:22px 22px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.7);animation:up .35s ease}
+.mcard .x{position:absolute;top:10px;right:12px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(224,202,113,.5);
+  background:rgba(0,0,0,.5);color:#E0CA71;font-size:18px;cursor:pointer;z-index:2}
+.mhead{padding:20px 24px 14px;border-bottom:1px solid rgba(224,202,113,.22);text-align:center;flex:none}
+.mhead .t1{font-family:'Ma Shan Zheng',serif;font-size:clamp(22px,5.4vw,30px);color:var(--gold);letter-spacing:6px;text-shadow:0 0 20px rgba(224,202,113,.28)}
+.mhead .t2{font-size:11.5px;color:#A8A6A0;letter-spacing:3px;margin-top:5px}
+.mbody{display:flex;flex-direction:column;min-height:0;flex:1;padding:14px 18px 14px}
+.mchat{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px}
+.msg{max-width:88%;padding:10px 13px;border-radius:12px;font-size:13.5px;line-height:1.9;letter-spacing:.3px;word-break:break-word}
+.msg.a{align-self:flex-start;background:rgba(224,202,113,.09);border:1px solid rgba(224,202,113,.24);color:#E9E7E2;border-bottom-left-radius:4px}
+.msg.u{align-self:flex-end;background:rgba(224,202,113,.20);border:1px solid rgba(224,202,113,.44);color:#FFF3CE;border-bottom-right-radius:4px}
+.msg.typing{color:#A8A6A0;font-style:italic;letter-spacing:2px}
+.mchips{display:flex;gap:7px;overflow-x:auto;padding:10px 0 0;flex:none;scrollbar-width:none}
+.mchips::-webkit-scrollbar{display:none}
+.mchip{flex:none;padding:6px 12px;border-radius:999px;border:1px solid rgba(224,202,113,.32);background:transparent;
+  color:#C9B26A;font-size:12px;cursor:pointer;white-space:nowrap;letter-spacing:.5px}
+.mchip:hover{border-color:var(--gold);color:#F3E4A9}
+.minput{display:flex;gap:8px;margin-top:10px;flex:none}
+.minput input{flex:1;min-width:0;padding:11px 14px;border-radius:10px;border:1px solid rgba(224,202,113,.4);
+  background:rgba(224,202,113,.06);color:#EFEBE0;font-size:14px;outline:none}
+.minput input:focus{border-color:var(--gold);box-shadow:0 0 14px rgba(224,202,113,.16)}
+.minput input::placeholder{color:#8B887E}
+.minput button{flex:none;padding:0 18px;border-radius:10px;border:1px solid rgba(224,202,113,.55);
+  background:rgba(224,202,113,.14);color:#F3E4A9;font-size:14px;letter-spacing:2px;cursor:pointer}
+.mnote{font-size:11px;color:#7F7C73;text-align:center;margin-top:8px;letter-spacing:1px;flex:none}
+.mfab{position:fixed;right:18px;bottom:80px;z-index:61;border-radius:999px;padding:11px 17px;cursor:pointer;
+  background:linear-gradient(160deg,#2A2823,#1B1A16);border:1px solid rgba(224,202,113,.6);color:#F3E4A9;
+  font-size:13.5px;letter-spacing:2px;box-shadow:0 6px 22px rgba(0,0,0,.5)}
+.mfab:hover{border-color:var(--gold);box-shadow:0 6px 26px rgba(224,202,113,.28)}
+@media (max-width:640px){ .mfab{right:14px;bottom:72px;padding:10px 14px;font-size:12.5px;letter-spacing:1px} }
+.npc{cursor:pointer}
+.mfab svg,#qianBtn svg,#passQian svg{width:1.05em;height:1.05em;display:inline-block;vertical-align:-.16em}
 </style>
 </head>
 <body>
@@ -383,7 +418,7 @@ details.gj p{padding:2px 16px 14px;font-size:14px;line-height:2.05;color:#000;te
   <button class="abtn" id="dataBtn">▦ 语料库</button>
   <button class="abtn" id="aboutBtn">▣ 研究框架</button>
   <button class="abtn" id="passBtn">🪙 文牒 <b id="passN">0</b>/10</button>
-  <button class="abtn" id="qianBtn" title="摇一支梦华签"><span class="qw">🎋 梦华签</span><span class="qn">🎋</span></button>
+  <button class="abtn" id="qianBtn" title="摇一支梦华签"><span class="qw"><svg viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label="梦华签"><title>梦华签</title><g fill="none" stroke="#F3E4A9" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8.4 9.8 H15.6 L15.1 19.6 C15 20.5 14.3 21.1 13.4 21.1 H10.6 C9.7 21.1 9 20.5 8.9 19.6 Z"/><path d="M9.8 6.6 L10 9.8 M12 5.2 V9.8 M14.2 6.6 L14 9.8"/><path d="M8.7 9.8 H15.3"/></g></svg> 梦华签</span><span class="qn"><svg viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label="梦华签"><title>梦华签</title><g fill="none" stroke="#F3E4A9" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8.4 9.8 H15.6 L15.1 19.6 C15 20.5 14.3 21.1 13.4 21.1 H10.6 C9.7 21.1 9 20.5 8.9 19.6 Z"/><path d="M9.8 6.6 L10 9.8 M12 5.2 V9.8 M14.2 6.6 L14 9.8"/><path d="M8.7 9.8 H15.3"/></g></svg></span></button>
   <button class="back" id="backBtn">‹ 返回</button>
 </header>
 
@@ -458,6 +493,7 @@ details.gj p{padding:2px 16px 14px;font-size:14px;line-height:2.05;color:#000;te
 </div>
 
 <button class="fab" id="fabBtn">🏮 回地图</button>
+<button class="mfab" id="masterFab" title="问梦华先生"><svg viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label="梦华先生"><title>梦华先生</title><g fill="none" stroke="#F3E4A9" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="6.4" y="6" width="11.2" height="12" rx="1.2"/><path d="M8.6 9.6 H15.4 M8.6 12.4 H15.4 M8.6 15.2 H13"/><path d="M3.6 6.4 V17.6 M20.4 6.4 V17.6"/><circle cx="3.6" cy="6.4" r="1.1"/><circle cx="3.6" cy="17.6" r="1.1"/><circle cx="20.4" cy="6.4" r="1.1"/><circle cx="20.4" cy="17.6" r="1.1"/></g></svg> 梦华先生</button>
 <div class="npc" id="npc"><div class="npc-ava">🧑‍🍳</div><div class="npc-bubble" id="npcBubble"></div></div>
 <div class="tip" id="tip">提示：地图方位与真实开封一致， 西北为清明上河园·万岁山片区，东北为铁塔公园，东南为禹王台·繁塔</div>
 
@@ -502,7 +538,7 @@ details.gj p{padding:2px 16px 14px;font-size:14px;line-height:2.05;color:#000;te
       <div class="pgrid" id="pgrid"></div>
       <p class="pnote" id="pnote">点击地图上的景区即视为"到此一游"，自动盖下一枚金印。</p>
       <button class="rt-go" id="passSave" style="margin-top:4px">🖼 保存通关文牒长图</button>
-      <button class="rt-go" id="passQian" style="margin-top:8px">🎋 摇一支梦华签</button>
+      <button class="rt-go" id="passQian" style="margin-top:8px"><svg viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label="梦华签"><title>梦华签</title><g fill="none" stroke="#F3E4A9" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8.4 9.8 H15.6 L15.1 19.6 C15 20.5 14.3 21.1 13.4 21.1 H10.6 C9.7 21.1 9 20.5 8.9 19.6 Z"/><path d="M9.8 6.6 L10 9.8 M12 5.2 V9.8 M14.2 6.6 L14 9.8"/><path d="M8.7 9.8 H15.3"/></g></svg> 摇一支梦华签</button>
     </div>
   </div>
 </div>
@@ -515,7 +551,6 @@ details.gj p{padding:2px 16px 14px;font-size:14px;line-height:2.05;color:#000;te
       <p id="cardDesc"></p>
       <div class="route" id="cardRoute"></div>
       <details class="gj"><summary>📜 《东京梦华录》原文对照</summary><p id="gjText"></p></details>
-      <div class="tts-row"><button class="rt-go tts-btn" id="ttsCard">🔊 朗读词条</button><button class="rt-go tts-btn" id="ttsGj">🔊 朗读原文</button></div>
     </div>
   </div>
 </div>
@@ -538,6 +573,24 @@ details.gj p{padding:2px 16px 14px;font-size:14px;line-height:2.05;color:#000;te
       </div>
       <div class="qian-done" id="qianDone" style="display:none">✦ 梦华十签 · 已集齐 ✦</div>
       <p class="pnote">签文语料取自本站十大景区词库与《东京梦华录》，集齐十签即圆「梦华通关」。</p>
+    </div>
+  </div>
+</div>
+<div id="master">
+  <div class="mcard">
+    <button class="x" id="masterX">✕</button>
+    <div class="mhead">
+      <div class="t1">梦华先生</div>
+      <div class="t2">汴京说书人 · 有问必答</div>
+    </div>
+    <div class="mbody">
+      <div class="mchat" id="mChat"></div>
+      <div class="mchips" id="mChips"></div>
+      <div class="minput">
+        <input id="mInput" type="text" placeholder="问点什么，如：开封为什么叫东京？" autocomplete="off">
+        <button id="mSend">发送</button>
+      </div>
+      <div class="mnote">答语取自站内十景语料与《东京梦华录》 · 离线可用</div>
     </div>
   </div>
 </div>
@@ -1183,12 +1236,11 @@ function openCard(name,cat,w){
   el('cardDesc').textContent=w.d||'（介绍待补充）';
   el('cardRoute').innerHTML='<b>🧭 如何到达：</b>'+(w.route||'位于景区内，循景区导览标识前往。');
   setGJ(w.n);
-  window.__ttsCtx={spot:name,name:w.n,desc:w.d||'',gj:GJ[w.n]||null};
   el('cardRoute').closest('.bd').querySelector('details.gj').open=false;
   modal.classList.add('open');
   typeSound(w.n);
 }
-el('cardX').onclick=()=>{modal.classList.remove('open');stopSpeak();};
+el('cardX').onclick=()=>modal.classList.remove('open');
 el('aboutBtn').onclick=()=>el('about').classList.add('open');
 el('scrollBtn').onclick=()=>{show('scroll');buildScroll()};
 let _rzT=0;window.addEventListener('resize',()=>{clearTimeout(_rzT);_rzT=setTimeout(()=>{
@@ -1477,68 +1529,7 @@ setTimeout(()=>{tip.style.opacity=0;setTimeout(()=>tip.style.display='none',600)
               ② 梦华签（随机签文 + 十签收集）
               ③ 语料库全局检索（跨景区 × 六大类）
    ===================================================================== */
-/* ---------- ① 语音朗读 ---------- */
-function ttsReady(){ return 'speechSynthesis' in window; }
-function stopSpeak(){ try{ speechSynthesis.cancel(); }catch(e){} }
-/* 清理干扰合成的装饰符号：引号/书名号/间隔号/emoji 等（部分浏览器遇此类字符会静音） */
-function ttsClean(t){
-  return (t||'')
-    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2B00}-\u{2BFF}]/gu,'')
-    .replace(/[「」『』《》【】〈〉""''·—…～%％]/g,'，')
-    .replace(/\s*，\s*/g,'，').replace(/，+/g,'，').replace(/^，+|，+$/g,'');
-}
-let __ttsToastT=0;
-function ttsToast(msg){
-  clearTimeout(__ttsToastT);
-  document.querySelectorAll('.stamp-toast.tts-msg').forEach(e=>e.remove());
-  const t=document.createElement('div'); t.className='stamp-toast tts-msg'; t.style.fontSize='14px';
-  t.textContent=msg; document.body.appendChild(t);
-  requestAnimationFrame(()=>t.classList.add('show'));
-  __ttsToastT=setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),500); },2800);
-}
-/* iOS/Safari 需要一次同步的 speak 调用来"解锁"语音通道（静音占位，无感知） */
-function ttsUnlock(){
-  if(!ttsReady()) return;
-  try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){}
-}
-function speak(text, btn){
-  if(!ttsReady() || !text) return;
-  const clean=ttsClean(text);
-  if(!clean) return;
-  ttsUnlock();
-  stopSpeak();
-  if(btn) btn.classList.add('speaking');
-  /* Chrome 下 cancel 后同一帧内 speak 可能被吞，延迟 60ms 再正式播放 */
-  setTimeout(()=>{
-    const u=new SpeechSynthesisUtterance(clean);
-    u.lang='zh-CN'; u.rate=.92; u.pitch=1;
-    try{
-      const all=speechSynthesis.getVoices()||[];
-      const vs=all.filter(v=>/^zh/i.test(v.lang)||/Chinese|中文/i.test(v.lang+v.name));
-      if(vs.length) u.voice=vs.find(v=>/Xiaoxiao|Yunxi|晓晓|云希|Tingting|婷婷/i.test(v.name))||vs[0];
-    }catch(e){}
-    let started=false;
-    u.onstart=()=>{ started=true; };
-    u.onend=u.onerror=()=>{ if(btn) btn.classList.remove('speaking'); };
-    u.onerror=(e)=>{ ttsToast('语音播放失败'+(e&&e.error?'：'+e.error:'')); };
-    speechSynthesis.speak(u);
-    setTimeout(()=>{
-      if(!started && !speechSynthesis.speaking){
-        if(btn) btn.classList.remove('speaking');
-        ttsToast('当前浏览器缺少中文语音包或禁用了朗读，请用系统自带 Safari / Chrome 打开');
-      }
-    },1500);
-  },60);
-}
-if(ttsReady()){
-  const warm=()=>{ try{ speechSynthesis.getVoices(); }catch(e){} };
-  warm();
-  try{ speechSynthesis.onvoiceschanged=warm; }catch(e){}
-  document.addEventListener('pointerdown', warm, {once:true});
-}else{
-  document.querySelectorAll('.tts-row').forEach(e=>e.style.display='none');
-}
-/* ---------- ② 梦华签 ---------- */
+/* ---------- ① 梦华签 ---------- */
 function getQian(){ try{ return JSON.parse(sessionStorage.getItem('songqian')||'[]'); }catch(e){ return []; } }
 function saveQian(a){ sessionStorage.setItem('songqian', JSON.stringify(a)); }
 function qianProgRender(){
@@ -1571,15 +1562,12 @@ function drawQian(){
       '<div class="qian-word"><b>'+(cat.ico||'')+' '+w.n+'</b><span class="zw">'+(cat.nm||'')+(w.z?' · '+w.z:'')+'</span><br>'+(w.d||'')+'</div>'+
       '<div class="qian-quote">'+q+'</div>'+
       '<div class="qian-acts">'+
-        '<button class="rt-go" id="qianVoice">🔊 听签文</button>'+
         '<button class="rt-go" id="qianGo">▶ 去逛这座景区</button>'+
         '<button class="rt-go" id="qianAgain">⟳ 再摇一签</button>'+
       '</div>'+
     '</div>';
   qianProgRender();
-  const vt='为你抽得'+no+'。'+spot+'，'+(info.sub||'')+'。签文语料：'+w.n+'，'+(w.z?w.z+'。':'')+(w.d||'')+'。'+q;
-  el('qianVoice').onclick=e=>speak(vt,e.currentTarget);
-  el('qianGo').onclick=()=>{ el('qian').classList.remove('open'); stopSpeak(); openCats(spot); };
+  el('qianGo').onclick=()=>{ el('qian').classList.remove('open'); openCats(spot); };
   el('qianAgain').onclick=()=>{
     const t=el('qianTube')||el('qianStage');
     el('qianStage').innerHTML='<div class="qian-tube shake">🎋</div>';
@@ -1587,13 +1575,10 @@ function drawQian(){
   };
 }
 el('passQian').onclick=()=>{ el('pass').classList.remove('open'); el('qianBtn').click(); };
-el('qianBtn').onclick=()=>{ stopSpeak(); qianProgRender(); el('qianStage').innerHTML='<div><div class="qian-tube">🎋</div><div class="qian-idle"><p>心存一念 · 摇动签筒<br>每签随机指向一座景区与一处语料</p><button class="rt-go" id="qianDraw">🎋 摇一签</button></div></div>'; el('qianDraw').onclick=()=>{ el('qianStage').innerHTML='<div class="qian-tube shake">🎋</div>'; setTimeout(drawQian,650); }; el('qian').classList.add('open'); };
-el('qianX').onclick=()=>{ el('qian').classList.remove('open'); stopSpeak(); };
-el('qian').addEventListener('click',e=>{ if(e.target===el('qian')){ el('qian').classList.remove('open'); stopSpeak(); } });
-/* ---------- ③ 词条弹窗朗读 ---------- */
-el('ttsCard').onclick=e=>{ const c=window.__ttsCtx; speak(c?('在'+c.spot+'，'+c.name+'。'+c.desc):'',e.currentTarget); };
-el('ttsGj').onclick=e=>{ const c=window.__ttsCtx, g=c&&c.gj; speak(g?('原文。'+g.y+'。释义。'+g.b):'该词条暂无《东京梦华录》原文对照。',e.currentTarget); };
-/* ---------- ④ 语料库全局检索 ---------- */
+el('qianBtn').onclick=()=>{ qianProgRender(); el('qianStage').innerHTML='<div><div class="qian-tube">🎋</div><div class="qian-idle"><p>心存一念 · 摇动签筒<br>每签随机指向一座景区与一处语料</p><button class="rt-go" id="qianDraw">🎋 摇一签</button></div></div>'; el('qianDraw').onclick=()=>{ el('qianStage').innerHTML='<div class="qian-tube shake">🎋</div>'; setTimeout(drawQian,650); }; el('qian').classList.add('open'); };
+el('qianX').onclick=()=>el('qian').classList.remove('open');
+el('qian').addEventListener('click',e=>{ if(e.target===el('qian')) el('qian').classList.remove('open'); });
+/* ---------- ② 语料库全局检索 ---------- */
 const searchState={kw:'',cat:'all'};
 function buildSearchChips(){
   const box=el('searchChips'); if(!box) return;
@@ -1649,6 +1634,108 @@ buildSearchChips();
   let t=0;
   inp.addEventListener('input',()=>{ clearTimeout(t); t=setTimeout(()=>{ searchState.kw=inp.value; runSearch(); },180); });
 })();
+
+/* =====================================================================
+   梦华先生问答：本地知识库（离线、零依赖），命中景区名时用站内语料动态作答
+   ===================================================================== */
+const MASTER_KB=[
+ {k:['为什么叫东京','东京','汴京','汴梁','名字','为什么叫开封'],a:'开封在北宋称"东京"，又称汴京、汴梁。唐时这里是汴州，五代的后梁、后晋、后汉、后周相继建都，北宋承之定为国都；因地处洛阳之东，故称东京。鼎盛时人口逾百万，是当时世界上最繁华的都市之一，《东京梦华录》记的正是这座城。'},
+ {k:['东京梦华录','孟元老','这本书','写了什么','内容'],a:'《东京梦华录》是孟元老南渡之后追忆汴京旧事的笔记，共十卷：城市布局、河道桥梁、市井饮食、岁时节令、瓦舍百戏、婚丧礼俗，无所不包，相当于一部"北宋首都生活百科"。本站每条语料下的原文对照，多取自此书。'},
+ {k:['清明上河图','张择端','这幅画'],a:'《清明上河图》为北宋画家张择端所绘，绢本长卷，画汴京自郊野至城内的市井百态——虹桥、漕船、店铺、行旅，人物八百余。清明上河园即以这幅画为蓝本复建，本站长卷页的构图也取意于此。'},
+ {k:['吃什么','饮食','小吃','夜市','灌汤包','酒楼','吃'],a:'宋人吃得讲究：汴京正店七十二户，夜市三更才散、五更又开。灌汤包、胡饼、馓子、糖炒栗子、梅花包子皆有口碑，夏夜还有卖"冰雪"冷饮的摊子。想细看，去词云页选"饮食"一类，或直接问我"清明上河园"。'},
+ {k:['服饰','穿什么','汉服','褙子','交领','衣服'],a:'宋制汉服以素雅简洁见长：交领右衽、直领对襟，女子常着褙子配褶裙，男子着圆领袍或直裰、头戴幞头，颜色多用淡彩间色。本站"演出服饰"的图标，画的正是交领右衽、广袖束带的宋制样式。'},
+ {k:['玩什么','娱乐','瓦舍','勾栏','投壶','蹴鞠','百戏','杂剧'],a:'宋人玩乐极盛：瓦舍勾栏里说书、傀儡戏、杂剧、相扑从早演到晚；士大夫宴饮行投壶之礼，市井少年好蹴鞠。本站"游乐"一类的图标便取投壶之形。'},
+ {k:['建筑','斗拱','歇山','木构','房子','屋顶'],a:'宋代建筑一改唐代雄浑，转向秀丽精巧：歇山顶、飞檐起翘，斗拱比例缩小而装饰性增强，色调以青灰瓦、朱红柱、白墙为主。铁塔、繁塔与各景区的仿宋门楼，都是可对照的样本。'},
+ {k:['语言景观','什么是景观','调研','语料','研究','课题','方法','采风'],a:'语言景观（linguistic landscape）指公共空间里"看得见的文字"：招牌、匾额、楹联、导览牌、标语等。我们以开封十景为样本，采集牌匾楹联、碑刻题记、导览标识、演艺台词、NPC 互动语与线上 UGC，建成专题语料库，再用词频与语义分析，看"宋文化"如何被写进城市空间。'},
+ {k:['你们','项目','做了什么','创新','挑战杯','实践','团队'],a:'我们做的是"寻迹宋韵"：以《东京梦华录》为文献底本，对开封十处景区的语言景观做田野调研，建语料库、做词频统计，再把结果做成这座可交互的网站——地图、长卷、词云、梦华签、通关文牒，都是研究成果的"可读版本"。'},
+ {k:['怎么用','网站','功能','怎么玩','使用','介绍这个网站'],a:'五种逛法：①地图点景区，进六大类；②长卷左右拖动，看十景；③语料库可检索全部词条；④词云看每类高频词，点词有原文对照；⑤文牒记录你逛过的景区。另有梦华签可摇，摇到景区能直达。'},
+ {k:['梦华签','摇签','抽签'],a:'梦华签是本站的小玩法：摇一签，随机得一景区、一条语料、一句《东京梦华录》金句。抽到新景区会记入签谱，集齐十景即"梦华十签"。桌面端在顶栏，手机端在文牒弹窗里。'},
+ {k:['文牒','通关','印章','金印','收集'],a:'通关文牒记录你的足迹：点开一个景区便盖一枚金印，集齐十枚可生成一张长图保存。它是"到此一游"的宋式版本。'},
+ {k:['一日游','路线','怎么逛','行程','推荐','半天'],a:'一日路线可这样走：上午清明上河园（开园迎宾、虹桥、包公巡河），午后龙亭与翰园碑林（登台看潘杨二湖、赏碑刻），傍晚铁塔公园，入夜去大宋御河坐船或逛夜市。若喜武侠，可把万岁山换进午后。'},
+ {k:['汴河','漕运','河','船','水'],a:'汴河是北宋漕运命脉，江淮米粮经此入京，《东京梦华录》开篇即写河道桥梁。清明上河园的东京码头与大宋御河的夜游，都是对这条水道的复原。'},
+ {k:['包公','包拯','开封府','包青天'],a:'包拯知开封府时以刚直闻名，后世尊为包青天。开封府景区有府衙、大堂、梅花堂与包公故事演出；包公祠在包公湖西岸，塑像与铜铡最受游人注目。'},
+ {k:['铁塔','繁塔','塔'],a:'铁塔并非铁铸，而是褐色琉璃砖塔，北宋皇祐元年建，十三层，因色似铁得名；繁塔更古，开宝年间建，现存三层，砖面雕佛，是开封现存最老的建筑之一。'},
+ {k:['翰园','碑林','书法','碑刻'],a:'中国翰园碑林藏历代书法碑刻数千方，自甲骨、钟鼎至当代名家，是研究汉字书写与碑刻语言的好样本，也是本站"碑刻题记"类语料的重要来源。'},
+ {k:['御河','夜游','夜景','晚上'],a:'大宋御河贯通城内水系，两岸仿宋建筑与桥榭相连，夜航时灯影入水，是体验"汴京夜色"最直接的方式。'},
+ {k:['万岁山','武侠','大宋武侠城'],a:'万岁山·大宋武侠城以实景武侠演出著称，城墙、镖局、酒肆、擂台一应俱全，NPC 以江湖口吻与游客对话，是动态语言景观最密集的样本之一。'},
+ {k:['禹王台','吹台','古吹台'],a:'禹王台公园内的古吹台，传为春秋乐师师旷吹乐之处，后有禹王庙，园中古木参天，是开封城南的文脉所在。'},
+ {k:['菊花','市花','菊展','秋天'],a:'菊花是开封市花。每年金秋菊展满城皆菊，龙亭与清明上河园为主会场；菊展期间的标语、造型与摊位叫卖，是典型的季节性语言景观。'},
+ {k:['你好','您好','先生好','在吗','嗨'],a:'在下梦华先生，汴京说书人。宋韵旧事、十景游线、这座网站的用法，皆可问我。'},
+ {k:['谢谢','多谢','感谢','辛苦'],a:'客气。若还想听，尽管问——汴京的旧事，三天三夜也说不完。'},
+ {k:['你是谁','什么人','介绍一下你','你是ai','机器人'],a:'我是梦华先生，守着这座"寻迹宋韵"的说书人。答语取自站内十景语料与《东京梦华录》，不联网也能应答。'}
+];
+const MASTER_ALIAS={
+ '包公祠':'包公湖（包公祠）','包公湖':'包公湖（包公祠）',
+ '翰园碑林':'中国翰园碑林','翰园':'中国翰园碑林',
+ '万岁山':'万岁山·大宋武侠城','武侠城':'万岁山·大宋武侠城',
+ '龙亭':'龙亭景区','铁塔':'铁塔公园','繁塔':'繁塔','御河':'大宋御河',
+ '开封府':'开封府','禹王台':'禹王台公园','清明上河园':'清明上河园'
+};
+function spotAnswer(spot){
+  const info=DATA[spot]||{};
+  const take=(id,n=3)=>((info[id]&&info[id].list)||[]).slice(0,n).map(w=>w.n).join('、');
+  const arch=take('arch'), play=take('play'), food=take('food'), nat=take('nat',2);
+  let a=spot+'，'+(info.sub||'汴京胜景')+'。';
+  if(arch) a+='可看的建筑有'+arch+'；';
+  if(nat) a+='可赏的景致有'+nat+'；';
+  if(play) a+='可遇的演艺游艺有'+play+'；';
+  if(food) a+='可尝的吃食有'+food+'。';
+  a+='点地图上的它，能翻出全部语料与原文对照。';
+  return a;
+}
+function masterAnswer(q){
+  const t=(q||'').replace(/\s/g,'');
+  if(!t) return null;
+  for(const [al,sp] of Object.entries(MASTER_ALIAS)){ if(t.includes(al)) return spotAnswer(sp); }
+  let best=null,bs=0;
+  for(const e of MASTER_KB){
+    let sc=0;
+    for(const k of e.k){ if(t.includes(k)) sc += (k.length>=3?3:2); }
+    if(sc>bs){ bs=sc; best=e; }
+  }
+  return (best && bs>=2) ? best.a : null;
+}
+/* ---------- 对话界面 ---------- */
+const M_CHIPS=['开封为什么叫东京？','《东京梦华录》写了什么？','宋代人吃什么？','清明上河园怎么逛？','推荐一条一日游路线','语言景观是什么？'];
+function mGet(){ try{ return JSON.parse(sessionStorage.getItem('songchat')||'[]'); }catch(e){ return []; } }
+function mSave(a){ try{ sessionStorage.setItem('songchat', JSON.stringify(a.slice(-40))); }catch(e){} }
+function mBubble(role,text){
+  const box=el('mChat'); if(!box) return null;
+  const d=document.createElement('div'); d.className='msg '+role; d.textContent=text;
+  box.appendChild(d); box.scrollTop=box.scrollHeight; return d;
+}
+function mRender(){
+  const box=el('mChat'); if(!box) return;
+  box.innerHTML='';
+  mBubble('a','在下梦华先生，汴京说书人。宋韵旧事、十景游线、这座网站的用法，皆可问我。');
+  mGet().forEach(x=>mBubble(x.r,x.t));
+  box.scrollTop=box.scrollHeight;
+}
+function mAsk(q){
+  q=(q||'').trim(); if(!q) return;
+  const h=mGet(); h.push({r:'u',t:q}); mSave(h); mBubble('u',q);
+  const inp=el('mInput'); if(inp) inp.value='';
+  const tip=mBubble('a typing','先生正在捋须…');
+  setTimeout(()=>{
+    const ans=masterAnswer(q)||'先生一时语塞。不如问我：开封为什么叫东京、《东京梦华录》写了什么、宋代人吃什么、清明上河园怎么逛。';
+    if(tip) tip.remove();
+    const h2=mGet(); h2.push({r:'a',t:ans}); mSave(h2); mBubble('a',ans);
+  },520);
+}
+el('mChips').innerHTML=M_CHIPS.map(c=>'<button class="mchip">'+c+'</button>').join('');
+el('mChips').onclick=e=>{ const b=e.target.closest('.mchip'); if(b) mAsk(b.textContent); };
+el('mSend').onclick=()=>mAsk(el('mInput').value);
+el('mInput').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); mAsk(el('mInput').value); } });
+function openMaster(){
+  el('master').classList.add('open'); mRender();
+  setTimeout(()=>{ try{ el('mInput').focus(); }catch(e){} },280);
+}
+el('masterFab').onclick=openMaster;
+el('masterX').onclick=()=>el('master').classList.remove('open');
+el('master').addEventListener('click',e=>{ if(e.target===el('master')) el('master').classList.remove('open'); });
+/* NPC 导览气泡也可点开问答 */
+const npcEl=el('npc');
+if(npcEl){ npcEl.title='点我问梦华先生'; npcEl.addEventListener('click',openMaster); }
 </script>
 </body>
 </html>
