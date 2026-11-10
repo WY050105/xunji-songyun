@@ -906,7 +906,6 @@ body.onhome #passBtn{display:none}
 #sceneWords #wordStage::before{background:rgba(255,253,247,.42); border:1px solid rgba(156,59,49,.16)}
 
 /* ---------- 导览气泡：手机不显示 ---------- */
-@media (max-width:640px){ .npc{display:none !important} }
 
 /* ---------- 封面闲章 ---------- */
 .hero-chop{position:absolute; right:9%; top:33%; z-index:4; width:clamp(38px,4.4vw,54px);
@@ -977,6 +976,17 @@ body.onhome #passBtn{display:none}
 @media (max-width:640px){
   .stamp-toast{display:none !important}
 }
+
+/* ---------- 导览小人：入场与指向 ---------- */
+.npc{opacity:0;transform:translateY(10px);transition:opacity .34s ease,transform .34s ease}
+.npc.show{opacity:1;transform:none}
+.npc-bubble{position:relative;box-shadow:0 10px 26px rgba(96,66,38,.18)}
+.npc-bubble::after{content:'';position:absolute;left:-5px;top:15px;width:9px;height:9px;background:#FBF6EA;
+  border-left:1px solid rgba(156,59,49,.40);border-bottom:1px solid rgba(156,59,49,.40);
+  transform:rotate(45deg);border-radius:0 0 0 2px}
+.npc.compact .npc-bubble::after{top:12px;width:8px;height:8px}
+.npc-bubble:hover{border-color:rgba(156,59,49,.62);box-shadow:0 14px 30px rgba(120,60,40,.22)}
+.npc-ava{box-shadow:0 5px 14px rgba(120,50,40,.28)}
 </style>
 </head>
 <body class="onhome">
@@ -2152,13 +2162,12 @@ function mapContentRect(){
 }
 /* 宽屏时地图两侧留白充足，把气泡放进左侧（优先）或右侧空白处 */
 function npcDynSlots(){
-  return [];
   const c=mapContentRect();
-  const freeL=Math.floor(c.left-14-12-8), freeR=Math.floor(innerWidth-14-12-c.right);
+  const freeL=Math.floor(c.left-18-12-4), freeR=Math.floor(innerWidth-18-12-c.right);
   const dyn=[];
-  const top='calc(var(--hdr,64px) + 104px)';
-  if(freeL>=150) dyn.push({left:'14px',right:'auto',top:top,bottom:'auto',mw:freeL,tight:freeL<260});
-  if(freeR>=150) dyn.push({left:'auto',right:'14px',top:top,bottom:'auto',mw:freeR,tight:freeR<260});
+  const top='calc(50% - 72px)';
+  if(freeL>=150) dyn.push({left:'18px',right:'auto',top:top,bottom:'auto',mw:freeL,tight:freeL<260});
+  if(freeR>=150) dyn.push({left:'auto',right:'18px',top:top,bottom:'auto',mw:freeR,tight:freeR<260});
   return dyn;
 }
 function npcOverlaps(){
@@ -2177,22 +2186,59 @@ function npcOverlaps(){
     return !(r.right+pad<b.left||r.left-pad>b.right||r.bottom+pad<b.top||r.top-pad>b.bottom);
   });
 }
+function npcHitsNodes(){
+  const n=el('npc'),r=n.getBoundingClientRect();
+  return [...document.querySelectorAll('#nodes .body')].some(c=>{
+    const b=c.getBoundingClientRect(), pad=18;
+    return !(r.right+pad<b.left||r.left-pad>b.right||r.bottom+pad<b.top||r.top-pad>b.bottom);
+  });
+}
 function npcShow(){
   const [html,target]=NPCLINES[npcIdx%NPCLINES.length];
   const b=el('npcBubble'), box=el('npc');
-  /* 仅在地图页露面 */
-  if(!(scenes.cats.classList.contains('active')||scenes.words.classList.contains('active'))){setTimeout(npcShow,4000);return;}
   /* 先就位并量好尺寸，再写文案，避免首帧宽度为 0 导致避让失效 */
   b.innerHTML=html+'<span class="go">去瞧瞧 →</span>';
-  b.onclick=()=>{npcHide();enterScene(target)};
+  b.onclick=()=>{npcHide();npcIdx++;npcNext=Date.now()+9000;enterScene(target)};
   box.classList.add('show');
-  let ok=-1;
-  const allSlots=npcDynSlots().concat(NPC_SLOTS);
-  for(let i=0;i<allSlots.length;i++){ npcApply(allSlots[i]); if(!npcOverlaps()){ok=i;break;} }
-  if(ok<0){ box.classList.remove('show'); setTimeout(npcShow,2000); return; }
-  npcTimer=setTimeout(()=>{npcHide();npcIdx++;setTimeout(npcShow,2000)},3000);
+  if(innerWidth<=640){
+    if(innerHeight<720){
+      /* 矮屏：贴在舆图下方、避开右下角浮动按钮 */
+      const rw=innerWidth<=360?116:124;
+      npcApply({left:'10px',right:rw+'px',top:'auto',bottom:'70px',tight:true,mw:innerWidth-10-rw-6});
+    }else{
+      /* 手机端：地图占满全屏，固定在舆图与“梦华先生”之间的空带 */
+      npcApply({left:'12px',right:'12px',top:'auto',bottom:'150px',tight:true});
+    }
+  }else{
+    let placed=false;
+    const allSlots=npcDynSlots().concat(NPC_SLOTS);
+    for(let i=0;i<allSlots.length;i++){
+      npcApply(allSlots[i]);
+      if(allSlots[i].mw&&allSlots[i].mw<205) continue;   /* 太窄会挤成多行，不用 */
+      if(!npcOverlaps()){placed=true;break;}
+    }
+    if(!placed){
+      /* 兜底：左下角浮笺，必要时逐级上移避开金印 */
+      const base=12;
+      for(const extra of [0,44,88,132]){
+        npcApply({left:'20px',right:'auto',top:'auto',bottom:(base+extra)+'px',mw:330});
+        if(!npcHitsNodes()){placed=true;break;}
+      }
+    }
+  }
+  npcTimer=setTimeout(()=>{npcHide();npcIdx++;npcNext=Date.now()+7000;},4600);
 }
-setTimeout(npcShow,0);
+let npcNext=0;
+function npcTick(){
+  if(!scenes.map.classList.contains('active')){
+    if(el('npc').classList.contains('show')) npcHide();
+    return;
+  }
+  if(el('npc').classList.contains('show')) return;
+  if(Date.now()<npcNext) return;
+  npcShow();
+}
+setInterval(npcTick,1200);
 window.addEventListener('resize',()=>{if(el('npc').classList.contains('show'))npcHide()});
 
 /* ===== ⑨ 语料库统计页 ===== */
